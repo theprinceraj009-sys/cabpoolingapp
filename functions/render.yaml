@@ -1,0 +1,14 @@
+services:
+  - type: web           # Free-tier web service on Render
+    name: campus-taxi-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/serviceAccountKey.json
+    secretFiles:
+      - name: serviceAccountKey.json
+        # Paste the full content of your Firebase Service Account JSON here
+        # in the Render dashboard under Secret Files

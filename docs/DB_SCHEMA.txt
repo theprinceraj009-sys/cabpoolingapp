@@ -1,0 +1,147 @@
+================================================================================
+DATABASE SCHEMA — CampusTaxiPooling
+Backend: Firebase Firestore (NoSQL, per-document model)
+Date: 2026-03-22
+================================================================================
+
+NOTE: Since the mobile app is Native Android with Firebase, we use Firestore as
+the primary real-time database. Each top-level collection represents a "service
+domain". Sub-collections are used for relationship data.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COLLECTION: users
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document ID: Firebase Auth UID (auto-generated)
+
+Fields:
+  uid              String   - Firebase Auth UID (same as document ID)
+  name             String   - Full name
+  email            String   - College-verified email (e.g., @cuchd.in)
+  rollNumber       String   - University roll number / employee ID
+  department       String   - Department (e.g., "CSE", "MBA")
+  role             String   - Enum: "STUDENT" | "FACULTY" | "ADMIN"
+  campusId         String   - e.g., "CU_CHANDIGARH"
+  profilePhotoUrl  String   - Cloud Storage URL (nullable)
+  phoneNumber      String   - Hidden by default (premium unlock)
+  socialLinks      Map      - { linkedin: "", instagram: "" }
+  subscriptionTier String   - Enum: "FREE" | "PREMIUM"
+  isBanned         Boolean  - Default: false
+  banReason        String   - Nullable
+  reportCount      Number   - Cumulative reports received
+  createdAt        Timestamp
+  updatedAt        Timestamp
+
+Sub-collection: users/{uid}/notifications
+  notifId          String   - Auto-ID
+  type             String   - "RIDE_REQUEST" | "ACCEPTED" | "REJECTED" | "MESSAGE" | "SYSTEM"
+  title            String
+  body             String
+  relatedRideId    String   - Nullable
+  isRead           Boolean  - Default: false
+  createdAt        Timestamp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COLLECTION: rides
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document ID: Auto-generated Firestore ID
+
+Fields:
+  rideId           String   - Same as document ID
+  postedByUid      String   - Ref → users/{uid}
+  postedByName     String   - Denormalized for feed display
+  campusId         String   - e.g., "CU_CHANDIGARH" (for multi-campus)
+  source           String   - Human-readable origin (e.g., "Gate 1, CU")
+  destination      String   - Human-readable destination (e.g., "Sector 17, Chandigarh")
+  routeDescription String   - Optional description of path
+  sourceLatLng     Map      - { lat: 0.0, lng: 0.0 }
+  destLatLng       Map      - { lat: 0.0, lng: 0.0 }
+  journeyDateTime  Timestamp - Planned departure date + time
+  totalFare        Number   - Total shared fare (INR)
+  totalSeats       Number   - e.g., 3
+  seatsRemaining   Number   - Decrements on each ACCEPTED join
+  preferences      String   - Free text (e.g., "Ladies only", "No smoking")
+  proofType        String   - "IMAGE" | "PDF" | "TEXT" | "NONE"
+  proofUrl         String   - Cloud Storage URL (nullable)
+  status           String   - "ACTIVE" | "FULL" | "STARTED" | "COMPLETED" | "CANCELLED"
+  isDeleted        Boolean  - Soft delete flag (Default: false)
+  createdAt        Timestamp
+  updatedAt        Timestamp
+
+Sub-collection: rides/{rideId}/seatRequests
+  requestId        String   - Auto ID
+  requesterUid     String   - Ref → users/{uid}
+  requesterName    String   - Denormalized
+  status           String   - "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED"
+  message          String   - Optional intro message from requester
+  requestedAt      Timestamp
+  respondedAt      Timestamp - Nullable
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COLLECTION: connections
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document ID: Auto-generated Firestore ID
+(Created when a seatRequest is ACCEPTED)
+
+Fields:
+  connectionId     String   - Same as document ID
+  rideId           String   - Ref → rides/{rideId}
+  posterUid        String   - Ref → users/{uid} (ride poster)
+  joinerUid        String   - Ref → users/{uid} (accepted joiner)
+  participants     Array    - [posterUid, joinerUid] — for Firestore array-contains queries
+  chatEnabled      Boolean  - true when connection is established
+  isActive         Boolean  - false if ride is cancelled or users parted
+  connectedAt      Timestamp
+
+Sub-collection: connections/{connectionId}/messages
+  messageId        String   - Auto ID
+  senderUid        String   - Ref → users/{uid}
+  text             String   - Message content
+  isFlagged        Boolean  - Default: false
+  flagReason       String   - Nullable ("PHONE_DETECTED", "EMAIL_DETECTED", "KEYWORD")
+  isBlocked        Boolean  - If true, message is not visible to recipient
+  sentAt           Timestamp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COLLECTION: reports
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document ID: Auto-generated
+
+Fields:
+  reportId         String   - Same as document ID
+  reporterUid      String   - Ref → users/{uid}
+  reportedUid      String   - Ref → users/{uid}
+  relatedRideId    String   - Nullable
+  relatedMessageId String   - Nullable
+  reason           String   - "HARASSMENT" | "SPAM" | "FAKE_RIDE" | "NO_SHOW" | "OTHER"
+  description      String   - Free text
+  status           String   - "OPEN" | "REVIEWED" | "RESOLVED" | "DISMISSED"
+  adminNote        String   - Nullable, set when Admin reviews
+  createdAt        Timestamp
+  resolvedAt       Timestamp - Nullable
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COLLECTION: auditLogs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document ID: Auto-generated
+
+Fields:
+  logId            String
+  actorUid         String   - Who performed the action
+  action           String   - e.g., "USER_BANNED", "RIDE_DELETED", "MESSAGE_FLAGGED"
+  targetUid        String   - Nullable (affected user)
+  targetRideId     String   - Nullable
+  metadata         Map      - Flexible K/V for additional context
+  performedAt      Timestamp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIRESTORE SECURITY NOTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- users/{uid}: read = authenticated users; write = only own document
+- users/{uid}/notifications: read/write = only own UID
+- rides/*: read = authenticated; write = only postedByUid or Admin
+- rides/{rideId}/seatRequests: read = posterUid or requesterUid; write = requesterUid
+- connections/*: read = participants array-contains(request.auth.uid)
+- connections/{id}/messages: read/write = participants only
+- reports/*: write = authenticated; read = Admin only
+- auditLogs/*: read/write = Admin only

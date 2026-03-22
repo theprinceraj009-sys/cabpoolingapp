@@ -1,0 +1,150 @@
+================================================================================
+SYSTEM WORKFLOWS — CampusTaxiPooling
+Date: 2026-03-22
+================================================================================
+
+Each workflow is documented as a step-by-step user + system interaction.
+States are labeled [CLIENT], [FIREBASE], [CLOUD FUNCTION] to indicate where
+each step executes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 1: USER REGISTRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    User opens app → SplashActivity checks auth state.
+Step 2:  [CLIENT]    No session → Navigate to LoginActivity → tap "Register".
+Step 3:  [CLIENT]    User fills: Name, Roll No., Department, Email, Password.
+Step 4:  [CLIENT]    Validate email domain ends with @cuchd.in. If not → show error.
+Step 5:  [CLIENT]    Call FirebaseAuth.createUserWithEmailAndPassword().
+Step 6:  [FIREBASE]  Firebase creates user, returns UID + ID Token.
+Step 7:  [CLIENT]    Call auth.currentUser.sendEmailVerification().
+Step 8:  [CLIENT]    Write user document to Firestore: users/{uid} with all profile data.
+Step 9:  [CLIENT]    Show "Check your email to verify" screen.
+Step 10: [CLIENT]    On app open post-verification: check isEmailVerified() → allow entry.
+ERROR STATES:
+  - Email already in use → "Email already registered. Login instead."
+  - Weak password → "Password must be at least 8 characters."
+  - Network error → "Check your internet connection and try again."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 2: USER LOGIN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    SplashActivity detects no current user → LoginActivity.
+Step 2:  [CLIENT]    User enters email + password → tap Login.
+Step 3:  [CLIENT]    Call FirebaseAuth.signInWithEmailAndPassword().
+Step 4:  [FIREBASE]  Token issued.
+Step 5:  [CLIENT]    Check isEmailVerified() → if false, show verify-first banner.
+Step 6:  [CLIENT]    Read Firestore users/{uid}.isBanned → if true, signOut() + ban message.
+Step 7:  [CLIENT]    Update FCM token in Firestore: users/{uid}.fcmToken = currentToken
+Step 8:  [CLIENT]    Navigate to RideFeedActivity (Home).
+ERROR STATES:
+  - Wrong password → Firebase returns error → "Invalid email or password."
+  - Banned user → "Your account has been suspended. Contact support."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 3: POST A RIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    User taps "+" / "Post Ride" FAB.
+Step 2:  [CLIENT]    Fill: Source, Destination, Date/Time, Total Fare, Total Seats, Preferences.
+Step 3:  [CLIENT]    Optionally attach proof (image/PDF from gallery or camera).
+Step 4:  [CLIENT]    Validate all required fields. journeyDateTime must be > now + 30min.
+Step 5:  [CLIENT]    (If proof attached) Upload to Firebase Storage → get download URL.
+Step 6:  [CLIENT]    Write ride document to Firestore: rides collection.
+Step 7:  [CLIENT]    Show success toast → Navigate back to Feed.
+Step 8:  [CLIENT]    Feed auto-refreshes with listener → new ride appears for others.
+ERROR STATES:
+  - Past date/time → "Please select a future departure time."
+  - Upload failure → "Failed to upload proof. Try again."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 4: JOIN A RIDE (FULL FLOW)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    User browses RideFeed → see a relevant ride card.
+Step 2:  [CLIENT]    Tap ride card → view RideDetailActivity.
+Step 3:  [CLIENT]    See: route, time, fare, seats remaining, poster's public profile.
+Step 4:  [CLIENT]    Tap "Request to Join".
+Step 5:  [CLIENT]    Check rides/{rideId}.seatsRemaining > 0 (guard).
+Step 6:  [CLIENT]    Check no existing PENDING/ACCEPTED request from self (guard).
+Step 7:  [CLIENT]    Write to rides/{rideId}/seatRequests with status: "PENDING".
+Step 8:  [CLOUD FN]  Firestore trigger → Cloud Function sends FCM push to poster.
+Step 9:  [CLIENT]    Poster opens app → sees notification badge on "My Ride Requests" tab.
+Step 10: [CLIENT]    Poster views list of PENDING requests → taps "Accept" or "Reject".
+
+--- ACCEPT PATH ---
+Step 11: [CLIENT]    Poster taps Accept on request.
+Step 12: [CLIENT]    Run Firestore Transaction:
+                       - seatRequest.status = "ACCEPTED"
+                       - rides.seatsRemaining -= 1
+                       - If seatsRemaining == 0: rides.status = "FULL"
+                       - Create connections/{auto-id} document
+Step 13: [CLOUD FN]  Cloud Function triggered on connection creation:
+                       - Send FCM push to joiner: "Your join request was accepted!"
+                       - Write notification to users/{joinerUid}/notifications
+Step 14: [CLIENT]    Joiner opens app → notification leads to ChatActivity.
+
+--- REJECT PATH ---
+Step 11: [CLIENT]    Poster taps Reject.
+Step 12: [CLIENT]    seatRequest.status = "REJECTED"
+Step 13: [CLOUD FN]  Cloud Function sends FCM: "Your join request was rejected."
+ERROR STATES:
+  - Seat fills up between Step 5 and Step 12 → Transaction fails → "Seat just filled up. Sorry!"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 5: CHAT FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    Both users now have an active connection. Chat icon is enabled.
+Step 2:  [CLIENT]    User navigates to ChatActivity for the connection.
+Step 3:  [CLIENT]    Real-time listener on connections/{id}/messages fires.
+Step 4:  [CLIENT]    User types message → hits send.
+Step 5:  [CLIENT]    Client-side moderation runs instantly (regex + keyword check).
+         → IF CLEAN: Write message to Firestore. Message shows as "Sent".
+         → IF FLAGGED: Show warning toast. Message written with isBlocked=true (not shown to other user).
+Step 6:  [CLOUD FN]  Server-side: onCreate trigger on messages collection → second moderation pass.
+                     If flagged server-side: set isFlagged=true, write to reports.
+Step 7:  [CLOUD FN]  If message is clean and not blocked → send FCM push to other participant.
+Step 8:  [CLIENT]    Recipient receives FCM push → opens ChatActivity → listener fires → message appears.
+ERROR STATES:
+  - Message blocked → Sender sees: "⚠️ Message not sent: contains restricted content."
+  - Firestore write fails → Show retry option.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 6: REPORTING A USER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    User taps "..." on ride card or chat screen → "Report User".
+Step 2:  [CLIENT]    Select reason (HARASSMENT / FAKE_RIDE / NO_SHOW / SPAM / OTHER).
+Step 3:  [CLIENT]    Optionally add description text.
+Step 4:  [CLIENT]    Write to reports collection.
+Step 5:  [CLOUD FN]  Increment users/{reportedUid}.reportCount by 1.
+Step 6:  [CLOUD FN]  If reportCount >= 10: auto-set isBanned = true, revoke auth token.
+                     Notify admin via email/FCM.
+Step 7:  [CLIENT]    Reported user gets automatically logged out on next action.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 7: RIDE CANCELLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [CLIENT]    Poster opens "My Rides" → tap a ride → tap "Cancel Ride".
+Step 2:  [CLIENT]    Confirm dialog: "Are you sure? All connected passengers will be notified."
+Step 3:  [CLIENT]    Update rides/{rideId}.isDeleted = true, status = "CANCELLED".
+Step 4:  [CLOUD FN]  Query all ACCEPTED seatRequests for this ride.
+                     For each accepted joiner: send FCM + write notification.
+Step 5:  [CLIENT]    Joiner sees notification: "A ride you joined was cancelled."
+                     Connection document isActive = false. Chat access removed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW 8: ADMIN BAN USER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1:  [ADMIN WEB] Admin opens web dashboard → reviews flagged reports.
+Step 2:  [ADMIN WEB] Admin selects user → taps "Ban User" → enters reason.
+Step 3:  [CLOUD FN]  Callable Cloud Function: banUser({ targetUid, reason }).
+Step 4:  [CLOUD FN]  Set users/{uid}.isBanned = true + banReason.
+Step 5:  [CLOUD FN]  Revoke auth tokens via Admin SDK: auth.revokeRefreshTokens(uid).
+Step 6:  [CLOUD FN]  Write audit log entry.
+Step 7:  [CLIENT]    Next time banned user touches any Firestore resource → Security Rules block them.
+                     App detects isBanned = true → signOut + "Account suspended" screen.

@@ -1,0 +1,266 @@
+================================================================================
+API CONTRACT — CampusTaxiPooling
+Architecture: Firebase Auth + Firestore (direct SDK from Android client)
+Date: 2026-03-22
+================================================================================
+
+NOTE: This app uses Firebase SDK directly from Android, so there is no
+traditional REST Gateway. Instead, this contract defines the "client-side
+operations" (reads, writes, listeners) and their expected data contracts.
+These also serve as contracts for Firebase Cloud Functions (if introduced later).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: AUTHENTICATION FLOWS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-AUTH-01] Registration
+  Trigger: User submits registration form
+  Client Action:
+    - Validate email ends with @cuchd.in (or allowed domains list)
+    - Call: FirebaseAuth.createUserWithEmailAndPassword(email, password)
+    - On success: Send email verification via auth.currentUser.sendEmailVerification()
+    - Create Firestore user document at: users/{uid}
+  Payload (written to Firestore):
+    {
+      uid: String,
+      name: String,
+      email: String,
+      rollNumber: String,
+      department: String,
+      role: "STUDENT" | "FACULTY",
+      campusId: "CU_CHANDIGARH",
+      subscriptionTier: "FREE",
+      isBanned: false,
+      reportCount: 0,
+      createdAt: ServerTimestamp
+    }
+  Validation Rules:
+    - email domain must be in allowedDomains list (stored in Firestore config)
+    - password min length: 8 characters
+    - name: not empty, max 100 chars
+
+[OP-AUTH-02] Login
+  Client Action:
+    - Call: FirebaseAuth.signInWithEmailAndPassword(email, password)
+    - Check: auth.currentUser.isEmailVerified() — if false, show verify banner
+    - On success: Navigate to HomeActivity / RideFeedActivity
+    - Check Firestore: users/{uid}.isBanned — if true, sign out + show ban message
+
+[OP-AUTH-03] Logout
+  Client Action:
+    - Call: FirebaseAuth.signOut()
+    - Clear SharedPreferences / local cache
+    - Navigate to LoginActivity
+
+[OP-AUTH-04] Password Reset
+  Client Action:
+    - Call: FirebaseAuth.sendPasswordResetEmail(email)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: USER PROFILE OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-USER-01] Get Own Profile
+  Read: db.collection("users").document(currentUid).get()
+  Returns: Full user document (all fields)
+
+[OP-USER-02] Get Public Profile (Other User)
+  Read: db.collection("users").document(targetUid).get()
+  Returns: Only public fields → { name, department, role, profilePhotoUrl, campusId }
+  Note: phoneNumber only visible if (subscriptionTier == PREMIUM AND hasMutualConnection)
+
+[OP-USER-03] Update Profile
+  Write: db.collection("users").document(currentUid).update({...fields})
+  Updatable: name, department, profilePhotoUrl, socialLinks, preferences
+
+[OP-USER-04] Upload Profile Photo
+  Action: Upload to Firebase Storage at: profilePhotos/{uid}/photo.jpg
+  Then: Update users/{uid}.profilePhotoUrl with download URL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: RIDE OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-RIDE-01] Post a Ride
+  Write: db.collection("rides").add({...rideData})
+  Required Fields:
+    source, destination, journeyDateTime, totalFare, totalSeats, campusId, postedByUid
+  Auto-set:
+    seatsRemaining = totalSeats
+    status = "ACTIVE"
+    isDeleted = false
+    createdAt = ServerTimestamp
+  Validation:
+    - journeyDateTime must be future (> now + 30 min)
+    - totalSeats: 1-8
+    - totalFare: >= 0
+    - source and destination: not empty
+
+[OP-RIDE-02] Browse Ride Feed
+  Query: db.collection("rides")
+           .where("campusId", "==", currentUser.campusId)
+           .where("status", "==", "ACTIVE")
+           .where("isDeleted", "==", false)
+           .where("postedByUid", "!=", currentUid)  // don't show own rides in join feed
+           .orderBy("journeyDateTime", "asc")
+           .limit(20)
+  Pagination: Use .startAfter(lastDocument) for infinite scroll
+
+[OP-RIDE-03] Get Own Posted Rides
+  Query: db.collection("rides")
+           .where("postedByUid", "==", currentUid)
+           .where("isDeleted", "==", false)
+           .orderBy("createdAt", "desc")
+
+[OP-RIDE-04] Update Ride
+  Write: db.collection("rides").document(rideId).update({...fields})
+  Updatable: source, destination, journeyDateTime, totalFare, preferences, proofUrl
+  Security: Only postedByUid can update
+
+[OP-RIDE-05] Cancel / Soft-Delete Ride
+  Write: db.collection("rides").document(rideId).update({
+    isDeleted: true,
+    status: "CANCELLED",
+    updatedAt: ServerTimestamp
+  })
+
+[OP-RIDE-06] Upload Ride Proof
+  Action: Upload to Firebase Storage at: rideProofs/{rideId}/proof.{ext}
+  Then: Update rides/{rideId}.proofUrl with download URL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: SEAT REQUEST (JOIN) OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-REQ-01] Send Join Request
+  Write: db.collection("rides").document(rideId)
+           .collection("seatRequests").add({
+             requesterUid: currentUid,
+             requesterName: currentUser.name,
+             status: "PENDING",
+             message: optionalMessage,
+             requestedAt: ServerTimestamp
+           })
+  Guard: Check rides/{rideId}.seatsRemaining > 0 before allowing request
+  Guard: Check no existing PENDING request from same user on this ride
+
+[OP-REQ-02] Accept Join Request (by Poster)
+  Run as Firestore Transaction:
+    Step 1: Update seatRequest.status = "ACCEPTED", respondedAt = now
+    Step 2: Decrement rides/{rideId}.seatsRemaining by 1
+    Step 3: If seatsRemaining == 0: update rides/{rideId}.status = "FULL"
+    Step 4: Create connection document in connections collection
+    Step 5: Write notification to joiner's notifications sub-collection
+
+[OP-REQ-03] Reject Join Request (by Poster)
+  Write: seatRequest.status = "REJECTED", respondedAt = now
+  Write: notification to joiner
+
+[OP-REQ-04] Cancel Join Request (by Requester)
+  Write: seatRequest.status = "CANCELLED"
+  If previously ACCEPTED: Increment rides/{rideId}.seatsRemaining by 1
+
+[OP-REQ-05] List Join Requests for a Ride (Poster view)
+  Read: db.collection("rides").document(rideId).collection("seatRequests")
+           .where("status", "==", "PENDING")
+           .orderBy("requestedAt", "asc")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: CHAT OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-CHAT-01] List My Active Connections (Chats)
+  Query: db.collection("connections")
+           .where("participants", "array-contains", currentUid)
+           .where("isActive", "==", true)
+           .orderBy("connectedAt", "desc")
+
+[OP-CHAT-02] Load Chat Messages
+  Real-time listener:
+    db.collection("connections").document(connectionId)
+      .collection("messages")
+      .orderBy("sentAt", "asc")
+      .addSnapshotListener(...)
+
+[OP-CHAT-03] Send Message
+  Pre-send local moderation (client-side):
+    - Regex check for phone numbers: \b[6-9]\d{9}\b
+    - Regex check for emails: [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+    - Keyword check: ["call me", "whatsapp", "telegram", "my number", "ping me"]
+  If clean:
+    Write: db.collection("connections").document(connectionId)
+             .collection("messages").add({
+               senderUid: currentUid,
+               text: messageText,
+               isFlagged: false,
+               isBlocked: false,
+               sentAt: ServerTimestamp
+             })
+  If flagged locally:
+    Show warning toast to user
+    Write with isFlagged: true, isBlocked: true
+    Write to reports collection for admin review
+
+[OP-CHAT-04] Typing Indicator (Optional Phase 2)
+  Use Firebase Realtime Database (separate from Firestore) for ephemeral presence:
+  Path: /typing/{connectionId}/{uid} = true/false
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: REPORTING OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-REPORT-01] Submit Report
+  Write: db.collection("reports").add({
+    reporterUid: currentUid,
+    reportedUid: targetUid,
+    relatedRideId: rideId (nullable),
+    reason: "HARASSMENT" | "FAKE_RIDE" | "NO_SHOW" | "SPAM" | "OTHER",
+    description: text,
+    status: "OPEN",
+    createdAt: ServerTimestamp
+  })
+  Side effect: Increment users/{reportedUid}.reportCount by 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7: NOTIFICATION OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-NOTIF-01] Read Notifications
+  Real-time listener:
+    db.collection("users").document(currentUid)
+      .collection("notifications")
+      .orderBy("createdAt", "desc").limit(30)
+      .addSnapshotListener(...)
+
+[OP-NOTIF-02] Mark Notification as Read
+  Write: notifications/{notifId}.isRead = true
+
+Push Notifications:
+  Delivered via Firebase Cloud Messaging (FCM)
+  FCM token stored in users/{uid}.fcmToken (update on app launch)
+  Trigger: Firebase Cloud Function reacts to Firestore writes and sends FCM messages
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8: ADMIN OPERATIONS (Cloud Function / Admin SDK)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OP-ADMIN-01] Ban User
+  Cloud Function: Callable function banUser({ targetUid, reason })
+  Actions: Set users/{targetUid}.isBanned = true, banReason = reason
+           Revoke Firebase Auth token via Admin SDK
+           Write to auditLogs
+
+[OP-ADMIN-02] Delete Ride
+  Cloud Function: Callable deleteRide({ rideId })
+  Actions: Set rides/{rideId}.isDeleted = true, status = "CANCELLED"
+
+[OP-ADMIN-03] Review Flagged Messages
+  Read: db.collectionGroup("messages").where("isFlagged", "==", true)
+
+[OP-ADMIN-04] View Reports
+  Read: db.collection("reports").where("status", "==", "OPEN")
+
+[OP-ADMIN-05] Resolve Report
+  Write: reports/{reportId}.status = "RESOLVED" | "DISMISSED"
+         reports/{reportId}.adminNote = text
+         reports/{reportId}.resolvedAt = now

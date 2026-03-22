@@ -1,0 +1,205 @@
+================================================================================
+SECURITY ARCHITECTURE — CampusTaxiPooling
+Date: 2026-03-22
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. AUTHENTICATION LAYER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Provider: Firebase Authentication
+Method:   Email + Password (Phase 1) → OTP Email Link (Phase 2 upgrade)
+
+Key Protections:
+  - Email Domain Restriction: Only @cuchd.in (or configured campus domains) allowed
+    Implementation: Client-side regex check before calling createUserWithEmailAndPassword
+    Firestore Security Rule check: request.resource.data.email.matches(".*@cuchd\\.in$")
+  - Email Verification: sendEmailVerification() called after registration.
+    App checks: auth.currentUser.isEmailVerified() on every sensitive action.
+  - JWT Tokens: Firebase issues ID Tokens (JWTs, 1-hour TTL).
+    Token is passed in all Firestore/Storage requests automatically by Firebase SDK.
+  - Refresh Tokens: Firebase SDK handles silently. No manual refresh needed.
+  - Token Revocation: Admin SDK revokes tokens when banning a user.
+
+Rate Limiting (Firebase built-in):
+  - Firebase limits auth attempts per IP automatically.
+  - Additional: implement client-side cooldown (disable button for 30s after 3 fails).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. AUTHORIZATION LAYER (RBAC via Firestore Security Rules)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Roles: STUDENT, FACULTY, ADMIN
+Role stored in: Firestore users/{uid}.role AND Firebase Auth Custom Claims
+
+Custom Claims (set via Firebase Admin SDK Cloud Function):
+  { role: "STUDENT" | "FACULTY" | "ADMIN" }
+  Used in Firestore Security Rules with: request.auth.token.role == "ADMIN"
+
+Firestore Security Rules (firestore.rules) Summary:
+
+  rules_version = '2'
+  service cloud.firestore {
+    match /databases/{database}/documents {
+
+      function isAuthenticated() {
+        return request.auth != null;
+      }
+      function isAdmin() {
+        return isAuthenticated() && request.auth.token.role == 'ADMIN';
+      }
+      function isOwner(uid) {
+        return isAuthenticated() && request.auth.uid == uid;
+      }
+      function isNotBanned() {
+        return !get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned;
+      }
+      function isEmailVerified() {
+        return request.auth.token.email_verified == true;
+      }
+      function isParticipant(connectionId) {
+        return isAuthenticated() &&
+          request.auth.uid in get(/databases/$(database)/documents/connections/$(connectionId)).data.participants;
+      }
+
+      // USER DOCUMENTS
+      match /users/{uid} {
+        allow read: if isAuthenticated() && isEmailVerified();
+        allow create: if isOwner(uid) && isEmailVerified();
+        allow update: if isOwner(uid) && isEmailVerified() && isNotBanned();
+        allow delete: if isAdmin();
+      }
+
+      // USER NOTIFICATIONS
+      match /users/{uid}/notifications/{notifId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // RIDES
+      match /rides/{rideId} {
+        allow read: if isAuthenticated() && isEmailVerified() && isNotBanned();
+        allow create: if isAuthenticated() && isEmailVerified() && isNotBanned();
+        allow update: if isAuthenticated() &&
+          (resource.data.postedByUid == request.auth.uid || isAdmin());
+        allow delete: if isAdmin();
+      }
+
+      // SEAT REQUESTS (sub-collection of rides)
+      match /rides/{rideId}/seatRequests/{reqId} {
+        allow read: if isAuthenticated() &&
+          (resource.data.requesterUid == request.auth.uid ||
+           get(/databases/$(database)/documents/rides/$(rideId)).data.postedByUid == request.auth.uid ||
+           isAdmin());
+        allow create: if isAuthenticated() && isEmailVerified() && isNotBanned();
+        allow update: if isAuthenticated() &&
+          (resource.data.requesterUid == request.auth.uid ||
+           get(/databases/$(database)/documents/rides/$(rideId)).data.postedByUid == request.auth.uid);
+      }
+
+      // CONNECTIONS
+      match /connections/{connectionId} {
+        allow read: if isParticipant(connectionId) || isAdmin();
+        allow create: if isAdmin(); // Only created via Cloud Function after accept
+        allow update: if isParticipant(connectionId);
+      }
+
+      // CHAT MESSAGES
+      match /connections/{connectionId}/messages/{messageId} {
+        allow read: if isParticipant(connectionId);
+        allow create: if isParticipant(connectionId) && isNotBanned();
+        allow update: if isAdmin(); // Admin can flag/block messages only
+        allow delete: if false; // Messages are never deleted, only flagged
+      }
+
+      // REPORTS
+      match /reports/{reportId} {
+        allow create: if isAuthenticated() && isEmailVerified();
+        allow read: if isOwner(resource.data.reporterUid) || isAdmin();
+        allow update: if isAdmin();
+      }
+
+      // AUDIT LOGS
+      match /auditLogs/{logId} {
+        allow read, write: if isAdmin();
+      }
+    }
+  }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. DATA PROTECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+At-Rest Encryption:
+  - Firestore data is encrypted at rest by Google (AES-256) by default.
+  - Firebase Storage files encrypted at rest by Google by default.
+  - Sensitive fields (phoneNumber) should be additionally encrypted using
+    Android Keystore + AES/GCM before writing to Firestore in Phase 2.
+
+In-Transit Encryption:
+  - All Firebase SDK communication is HTTPS/TLS 1.3 by default.
+  - No plain HTTP calls allowed — Firebase SDK enforces this.
+
+Phone Number / Contact Privacy:
+  - phoneNumber field is NEVER returned to clients via normal Firestore reads.
+  - Firestore Security Rules must explicitly block read access to phoneNumber
+    unless: reader is PREMIUM AND direct connection exists between reader and owner.
+  - Implementation: Field-level masking via Firestore field masks in queries.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. CHAT MODERATION SECURITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Client-side moderation (first pass, fast):
+  - Regex for Indian phone numbers: \b[6-9]\d{9}\b
+  - Regex for any email address: [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+  - Keyword list (case-insensitive): "call me", "my number", "whatsapp", "telegram",
+    "ping me", "contact me", "give me your number", "dm me"
+
+Server-side moderation (Firebase Cloud Function, async):
+  - Triggered on: Firestore write to connections/{id}/messages
+  - Runs same checks server-side as a reliable second pass
+  - If flag detected: set message.isBlocked = true, message.isFlagged = true
+    and write to reports collection for admin visibility.
+
+Auto-ban after threshold:
+  - If users/{uid}.reportCount >= 10 → Cloud Function auto-sets isBanned = true
+    and revokes auth tokens.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. FIREBASE STORAGE SECURITY RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  rules_version = '2'
+  service firebase.storage {
+    match /b/{bucket}/o {
+
+      match /profilePhotos/{uid}/{fileName} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == uid
+                     && request.resource.size < 5 * 1024 * 1024  // 5MB limit
+                     && request.resource.contentType.matches('image/.*');
+      }
+
+      match /rideProofs/{rideId}/{fileName} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+                     && request.resource.size < 10 * 1024 * 1024  // 10MB limit
+                     && (request.resource.contentType.matches('image/.*')
+                         || request.resource.contentType == 'application/pdf');
+      }
+    }
+  }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. ANDROID CLIENT SECURITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - google-services.json: Must NEVER be committed to public GitHub repo.
+    Add to .gitignore: **/google-services.json
+  - API Keys in google-services.json are restricted via Firebase console
+    (Android app package restriction).
+  - ProGuard/R8 MUST be enabled in release build to prevent reverse engineering.
+  - Root detection: Implement RootBeer library check in SplashActivity.
+  - Certificate Pinning: Optional Phase 2 for any future REST endpoints.
+  - SharedPreferences: Do NOT store sensitive data (tokens) in plain SharedPreferences.
+    Use Android EncryptedSharedPreferences (Jetpack Security library).

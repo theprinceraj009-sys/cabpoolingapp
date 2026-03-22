@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <application
+        android:name=".CampusTaxiApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CampusTaxiPooling"
+        tools:targetApi="31">
+
+        <!-- ================================================ -->
+        <!-- LAUNCHER                                         -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- ================================================ -->
+        <!-- AUTH                                             -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <!-- ================================================ -->
+        <!-- MAIN SHELL                                       -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".HomeActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
+
+        <!-- ================================================ -->
+        <!-- RIDE SCREENS                                     -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".PostRideActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".RideDetailActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
+
+        <!-- ================================================ -->
+        <!-- SEAT REQUESTS (poster side)                     -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".SeatRequestsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
+
+        <!-- ================================================ -->
+        <!-- CHAT                                             -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <!-- ================================================ -->
+        <!-- PROFILE                                          -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".EditProfileActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <!-- ================================================ -->
+        <!-- REPORT                                           -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".ReportActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <!-- ================================================ -->
+        <!-- ADMIN                                            -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".admin.AdminDashboardActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"/>
+
+        <!-- ================================================ -->
+        <!-- FCM PUSH NOTIFICATIONS                          -->
+        <!-- ================================================ -->
+        <service
+            android:name=".notifications.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
+        <!-- ================================================ -->
+        <!-- LEGACY                                           -->
+        <!-- ================================================ -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"/>
+
+    </application>
+</manifest>

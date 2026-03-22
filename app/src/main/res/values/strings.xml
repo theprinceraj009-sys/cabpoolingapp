@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">Campus Taxi Pooling</string>
+    <string name="tagline">Your campus ride, shared smart.</string>
+    <string name="login_title">Welcome Back</string>
+    <string name="login_subtitle">Sign in to find or share a ride</string>
+    <string name="register_title">Join Campus Rides</string>
+    <string name="register_subtitle">Use your campus email to get started</string>
+    <string name="email_hint">Campus email (e.g. 22bca@cuchd.in)</string>
+    <string name="password_hint">Password (min 8 characters)</string>
+    <string name="name_hint">Full Name</string>
+    <string name="roll_hint">Roll / Employee Number</string>
+    <string name="department_hint">Department (e.g. CSE, MBA)</string>
+    <string name="btn_login">Sign In</string>
+    <string name="btn_register">Create Account</string>
+    <string name="btn_logout">Logout</string>
+    <string name="go_to_register">New here? Create an account</string>
+    <string name="go_to_login">Already have an account? Sign In</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="email_domain_error">Please use your campus email (@cuchd.in)</string>
+    <string name="password_length_error">Password must be at least 8 characters</string>
+    <string name="fill_all_fields">Please fill in all required fields</string>
+    <string name="verify_email_title">Verify Your Email</string>
+    <string name="verify_email_body">We sent a verification link to your email. Please verify before continuing.</string>
+    <string name="account_banned">Your account has been suspended. Contact admin.</string>
+    <string name="post_ride">Post a Ride</string>
+    <string name="find_ride">Find a Ride</string>
+    <string name="my_rides">My Rides</string>
+    <string name="chats">Chats</string>
+    <string name="profile">Profile</string>
+</resources>

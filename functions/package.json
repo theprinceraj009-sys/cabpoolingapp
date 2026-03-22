@@ -1,0 +1,16 @@
+{
+  "name": "campus-taxi-api",
+  "description": "Hosted Express Push Notifications API",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.11.0",
+    "express": "^4.18.2"
+  },
+  "private": true
+}

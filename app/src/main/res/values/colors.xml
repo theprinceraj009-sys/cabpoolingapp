@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Colors -->
+    <color name="brand_primary">#5B4FE8</color>
+    <color name="brand_primary_dark">#3D32C4</color>
+    <color name="brand_primary_light">#7B71ED</color>
+    <color name="brand_secondary">#F5A623</color>
+    <color name="brand_accent">#00D4AA</color>
+
+    <!-- Background Colors -->
+    <color name="bg_dark">#0F0E1A</color>
+    <color name="bg_surface">#1A1929</color>
+    <color name="bg_card">#221F33</color>
+    <color name="bg_input">#2A2640</color>
+    <color name="bg_divider">#2E2B45</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#F0EEFF</color>
+    <color name="text_secondary">#9E9BBF</color>
+    <color name="text_hint">#5E5A7A</color>
+    <color name="text_link">#8B83F0</color>
+
+    <!-- Status Colors -->
+    <color name="status_success">#00D4AA</color>
+    <color name="status_warning">#F5A623</color>
+    <color name="status_error">#FF5370</color>
+    <color name="status_info">#5B9BF0</color>
+
+    <!-- Ride Status Colors -->
+    <color name="ride_active">#00D4AA</color>
+    <color name="ride_full">#F5A623</color>
+    <color name="ride_cancelled">#FF5370</color>
+    <color name="ride_completed">#5E5A7A</color>
+
+    <!-- Legacy -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

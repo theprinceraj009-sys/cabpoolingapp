@@ -24,8 +24,8 @@ import java.util.Map;
  */
 public class EditProfileActivity extends AppCompatActivity {
 
-    private TextInputLayout nameLayout, departmentLayout, phoneLayout;
-    private TextInputEditText nameEt, departmentEt, phoneEt;
+    private TextInputLayout nameLayout, departmentLayout, phoneLayout, rollNumberLayout;
+    private TextInputEditText nameEt, departmentEt, phoneEt, rollNumberEt;
     private MaterialButton saveBtn;
 
     private final UserRepository userRepo = UserRepository.getInstance();
@@ -39,9 +39,12 @@ public class EditProfileActivity extends AppCompatActivity {
         nameLayout = findViewById(R.id.nameLayout);
         departmentLayout = findViewById(R.id.departmentLayout);
         phoneLayout = findViewById(R.id.phoneLayout);
+        rollNumberLayout = findViewById(R.id.rollNumberLayout);
+        
         nameEt = findViewById(R.id.nameEt);
         departmentEt = findViewById(R.id.departmentEt);
         phoneEt = findViewById(R.id.phoneEt);
+        rollNumberEt = findViewById(R.id.rollNumberEt);
         saveBtn = findViewById(R.id.saveBtn);
 
         ImageView backBtn = findViewById(R.id.backBtn);
@@ -62,10 +65,27 @@ public class EditProfileActivity extends AppCompatActivity {
                         String name = doc.getString("name");
                         String dept = doc.getString("department");
                         String phone = doc.getString("phoneNumber");
+                        String roll = doc.getString("rollNumber");
 
                         if (name != null) nameEt.setText(name);
                         if (dept != null) departmentEt.setText(dept);
                         if (phone != null) phoneEt.setText(phone);
+                        
+                        if (roll != null) {
+                            rollNumberEt.setText(roll);
+                        } else if (user.getEmail() != null) {
+                            String emailStr = user.getEmail();
+                            int atIndex = emailStr.indexOf("@");
+                            if (atIndex > 0) {
+                                rollNumberEt.setText(emailStr.substring(0, atIndex));
+                            }
+                        }
+                    } else if (user.getEmail() != null) {
+                        String emailStr = user.getEmail();
+                        int atIndex = emailStr.indexOf("@");
+                        if (atIndex > 0) {
+                            rollNumberEt.setText(emailStr.substring(0, atIndex));
+                        }
                     }
                 });
     }
@@ -77,6 +97,7 @@ public class EditProfileActivity extends AppCompatActivity {
         String name = getText(nameEt);
         String dept = getText(departmentEt);
         String phone = getText(phoneEt);
+        String roll = getText(rollNumberEt);
 
         if (TextUtils.isEmpty(name)) {
             nameLayout.setError("Name cannot be empty");
@@ -99,11 +120,14 @@ public class EditProfileActivity extends AppCompatActivity {
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", name);
         updates.put("department", dept);
+        if (!roll.isEmpty()) updates.put("rollNumber", roll);
+        updates.put("role", "STUDENT"); // Default tag
+        updates.put("email", user.getEmail());
         if (!phone.isEmpty()) updates.put("phoneNumber", phone);
         updates.put("updatedAt", com.google.firebase.Timestamp.now());
 
         db.collection("users").document(user.getUid())
-                .update(updates)
+                .set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(v -> {
                     setLoading(false);
                     Snackbar.make(saveBtn, "Profile updated!", Snackbar.LENGTH_SHORT).show();

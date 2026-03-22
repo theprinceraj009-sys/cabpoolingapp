@@ -1,6 +1,7 @@
 package com.princeraj.campustaxipooling.repository;
 
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -52,15 +53,11 @@ public class RideRepository {
      * Gets the paginated, active ride feed for a campus.
      * Excludes the current user's own rides.
      */
-    public Query getRideFeed(String campusId, String currentUserUid) {
+    public Query getRideFeed(String campusId, String currentUserUid, int limit) {
         return db.collection(RIDES_COLLECTION)
                 .whereEqualTo("campusId", campusId)
                 .whereEqualTo("status", "ACTIVE")
-                .whereEqualTo("deleted", false)
-                .whereNotEqualTo("postedByUid", currentUserUid)
-                .orderBy("postedByUid")  // required before orderBy on different field after whereNotEqualTo
-                .orderBy("journeyDateTime", Query.Direction.ASCENDING)
-                .limit(20);
+                .limit(limit);
     }
 
     /**
@@ -92,17 +89,15 @@ public class RideRepository {
      * @param posterUid UID of the ride poster (for push notification).
      */
     public Task<DocumentReference> sendJoinRequest(String rideId, SeatRequest request, String posterUid) {
+        request.setRequestedAt(Timestamp.now());
         return db.collection(RIDES_COLLECTION)
                 .document(rideId)
                 .collection(SEAT_REQUESTS_SUB)
                 .add(request)
-                .addOnSuccessListener(ref ->
-                        NotificationApi.notifyJoinRequest(
-                                rideId,
-                                request.getRequesterName(),
-                                posterUid
-                        )
-                );
+                .addOnSuccessListener(ref -> NotificationApi.notifyJoinRequest(
+                        rideId,
+                        request.getRequesterName(),
+                        posterUid));
     }
 
     /**
@@ -112,8 +107,7 @@ public class RideRepository {
         return db.collection(RIDES_COLLECTION)
                 .document(rideId)
                 .collection(SEAT_REQUESTS_SUB)
-                .whereEqualTo("status", "PENDING")
-                .orderBy("requestedAt", Query.Direction.ASCENDING);
+                .whereEqualTo("status", "PENDING");
     }
 
     /**
@@ -122,8 +116,8 @@ public class RideRepository {
      * updates ride status if full, creates a connection document.
      */
     public Task<Void> acceptSeatRequest(String rideId, String requestId,
-                                         String requesterUid, String requesterName,
-                                         String posterUid, int currentSeatsRemaining) {
+            String requesterUid, String requesterName,
+            String posterUid, int currentSeatsRemaining) {
         DocumentReference rideRef = db.collection(RIDES_COLLECTION).document(rideId);
         DocumentReference requestRef = rideRef.collection(SEAT_REQUESTS_SUB).document(requestId);
         DocumentReference connectionRef = db.collection(CONNECTIONS_COLLECTION).document();
@@ -148,14 +142,17 @@ public class RideRepository {
             // 3. Create connection document
             Connection connection = new Connection(
                     rideId, posterUid, requesterUid,
-                    Arrays.asList(posterUid, requesterUid)
-            );
+                    Arrays.asList(posterUid, requesterUid));
+            connection.setConnectedAt(Timestamp.now());
             transaction.set(connectionRef, connection);
 
             return null;
-        }).addOnSuccessListener(unused ->
-                NotificationApi.notifyRequestUpdate(rideId, "ACCEPTED", requesterUid)
-        );
+        }).continueWithTask(task -> {
+            if (!task.isSuccessful())
+                throw task.getException();
+            NotificationApi.notifyRequestUpdate(rideId, "ACCEPTED", requesterUid);
+            return Tasks.forResult(null);
+        });
     }
 
     /**
@@ -172,9 +169,7 @@ public class RideRepository {
                 .collection(SEAT_REQUESTS_SUB)
                 .document(requestId)
                 .update(updates)
-                .addOnSuccessListener(unused ->
-                        NotificationApi.notifyRequestUpdate(rideId, "REJECTED", joinerUid)
-                );
+                .addOnSuccessListener(unused -> NotificationApi.notifyRequestUpdate(rideId, "REJECTED", joinerUid));
     }
 
     // ── Connections ───────────────────────────────────────────────────────────
@@ -184,8 +179,6 @@ public class RideRepository {
      */
     public Query getMyConnections(String uid) {
         return db.collection(CONNECTIONS_COLLECTION)
-                .whereArrayContains("participants", uid)
-                .whereEqualTo("isActive", true)
-                .orderBy("connectedAt", Query.Direction.DESCENDING);
+                .whereArrayContains("participants", uid);
     }
 }

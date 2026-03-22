@@ -76,7 +76,7 @@ public class AdminUserAdapter extends
             userDeptText.setText(user.getDepartment() != null ? user.getDepartment() : "");
 
             // Report count with warning for flagged users
-            int count = user.getReportCount();
+            long count = user.getReportCount();
             String countLabel = count + " report" + (count != 1 ? "s" : "");
             if (count >= 3) countLabel = "⚠️ " + countLabel;
             reportCountText.setText(countLabel);

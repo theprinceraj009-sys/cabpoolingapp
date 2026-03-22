@@ -28,7 +28,7 @@ public class NotificationApi {
     private static final String TAG = "NotificationApi";
 
     // ← Replace with your actual Render URL once deployed
-    private static final String BASE_URL = "https://YOUR_RENDER_URL.onrender.com";
+    private static final String BASE_URL = "https://campus-taxi-api.onrender.com";
 
     private static final MediaType JSON_TYPE = MediaType.get("application/json; charset=utf-8");
 

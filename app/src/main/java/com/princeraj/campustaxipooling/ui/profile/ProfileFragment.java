@@ -101,8 +101,16 @@ public class ProfileFragment extends Fragment {
         String roll = doc.getString("rollNumber");
         String dept = doc.getString("department");
         String tier = doc.getString("subscriptionTier");
+        
+        if ((roll == null || roll.trim().isEmpty()) && email != null) {
+            int atIndex = email.indexOf("@");
+            if (atIndex > 0) {
+                roll = email.substring(0, atIndex);
+            }
+        }
+        
         if (name == null) name = "Campus Member";
-        if (roll == null) roll = "N/A";
+        if (roll == null || roll.trim().isEmpty()) roll = "N/A";
         if (dept == null) dept = "N/A";
         if (tier == null) tier = "FREE";
 

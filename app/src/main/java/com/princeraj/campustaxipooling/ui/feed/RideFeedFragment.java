@@ -20,6 +20,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.princeraj.campustaxipooling.PostRideActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.Ride;
@@ -44,6 +45,9 @@ public class RideFeedFragment extends Fragment {
     private final List<Ride> filteredRides = new ArrayList<>();
 
     private final RideRepository rideRepo = RideRepository.getInstance();
+    private ListenerRegistration rideListener;
+    private int currentLimit = 20;
+    private boolean isLoadingMore = false;
 
     @Nullable
     @Override
@@ -79,8 +83,30 @@ public class RideFeedFragment extends Fragment {
                                 .putExtra("rideId", ride.getRideId())
                 )
         );
-        ridesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
+        ridesRecyclerView.setLayoutManager(layoutManager);
         ridesRecyclerView.setAdapter(adapter);
+
+        ridesRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                if (dy > 0 && !isLoadingMore) {
+                    int visibleItemCount = layoutManager.getChildCount();
+                    int totalItemCount = layoutManager.getItemCount();
+                    int pastVisibleItems = layoutManager.findFirstVisibleItemPosition();
+
+                    if ((visibleItemCount + pastVisibleItems) >= totalItemCount) {
+                        isLoadingMore = true;
+                        currentLimit += 20;
+                        if (rideListener != null) {
+                            rideListener.remove();
+                            rideListener = null;
+                        }
+                        loadRides();
+                    }
+                }
+            }
+        });
     }
 
     private void setupSearch() {
@@ -97,18 +123,25 @@ public class RideFeedFragment extends Fragment {
         String uid = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
 
-        // Real-time listener on the ride feed query
-        rideRepo.getRideFeed("CU_CHANDIGARH", uid)
+        // Real-time listener on the ride feed query with dynamic limit
+        rideListener = rideRepo.getRideFeed("CU_CHANDIGARH", uid, currentLimit)
                 .addSnapshotListener((snapshots, error) -> {
+                    isLoadingMore = false;
                     if (error != null || snapshots == null) return;
 
                     allRides.clear();
                     for (DocumentSnapshot doc : snapshots.getDocuments()) {
                         Ride ride = doc.toObject(Ride.class);
-                        if (ride != null) {
+                        if (ride != null && !ride.isDeleted() && "ACTIVE".equals(ride.getStatus())) {
                             allRides.add(ride);
                         }
                     }
+
+                    // Sort locally by journeyDateTime (ASCENDING) to avoid Firestore composite index requirement
+                    allRides.sort((r1, r2) -> {
+                        if (r1.getJourneyDateTime() == null || r2.getJourneyDateTime() == null) return 0;
+                        return r1.getJourneyDateTime().compareTo(r2.getJourneyDateTime());
+                    });
 
                     // Apply current search filter
                     String currentQuery = searchEt.getText() != null
@@ -141,6 +174,15 @@ public class RideFeedFragment extends Fragment {
         } else {
             ridesRecyclerView.setVisibility(View.VISIBLE);
             emptyStateView.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (rideListener != null) {
+            rideListener.remove();
+            rideListener = null;
         }
     }
 }

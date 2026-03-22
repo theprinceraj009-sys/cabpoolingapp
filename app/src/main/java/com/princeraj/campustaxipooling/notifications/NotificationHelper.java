@@ -45,29 +45,26 @@ public class NotificationHelper {
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
 
-        manager.createNotificationChannel(new NotificationChannel(
+        NotificationChannel rideReqChannel = new NotificationChannel(
                 CHANNEL_RIDE_REQUESTS,
                 "Join Requests",
-                NotificationManager.IMPORTANCE_HIGH)
-        {{
-            setDescription("Someone wants to join your ride");
-        }});
+                NotificationManager.IMPORTANCE_HIGH);
+        rideReqChannel.setDescription("Someone wants to join your ride");
+        manager.createNotificationChannel(rideReqChannel);
 
-        manager.createNotificationChannel(new NotificationChannel(
+        NotificationChannel rideUpdChannel = new NotificationChannel(
                 CHANNEL_RIDE_UPDATES,
                 "Ride Updates",
-                NotificationManager.IMPORTANCE_DEFAULT)
-        {{
-            setDescription("Status updates for rides you've requested to join");
-        }});
+                NotificationManager.IMPORTANCE_DEFAULT);
+        rideUpdChannel.setDescription("Status updates for rides you've requested to join");
+        manager.createNotificationChannel(rideUpdChannel);
 
-        manager.createNotificationChannel(new NotificationChannel(
+        NotificationChannel chatChannel = new NotificationChannel(
                 CHANNEL_CHAT,
                 "Chat Messages",
-                NotificationManager.IMPORTANCE_HIGH)
-        {{
-            setDescription("New messages from your ride partner");
-        }});
+                NotificationManager.IMPORTANCE_HIGH);
+        chatChannel.setDescription("New messages from your ride partner");
+        manager.createNotificationChannel(chatChannel);
     }
 
     // ── Specific notification builders ──────────────────────────────────────

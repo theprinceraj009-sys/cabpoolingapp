@@ -130,6 +130,12 @@ public class SeatRequestsActivity extends AppCompatActivity {
                         }
                     }
 
+                    // Sort locally by requestedAt (ASCENDING) to avoid Firestore composite index requirement
+                    pendingRequests.sort((r1, r2) -> {
+                        if (r1.getRequestedAt() == null || r2.getRequestedAt() == null) return 0;
+                        return r1.getRequestedAt().compareTo(r2.getRequestedAt());
+                    });
+
                     adapter.notifyDataSetChanged();
 
                     // Update count badge
@@ -185,7 +191,7 @@ public class SeatRequestsActivity extends AppCompatActivity {
     }
 
     private void handleReject(SeatRequest request) {
-        rideRepo.rejectSeatRequest(rideId, request.getRequestId())
+        rideRepo.rejectSeatRequest(rideId, request.getRequestId(), request.getRequesterUid())
                 .addOnSuccessListener(aVoid ->
                         Snackbar.make(requestsRecyclerView,
                                 "Request rejected.",

@@ -50,6 +50,7 @@ public class ChatActivity extends AppCompatActivity {
     private String connectionId;
     private String rideId;
     private String currentUid;
+    private String currentUserName = "User";
 
     private ListenerRegistration messageListener;
 
@@ -72,6 +73,7 @@ public class ChatActivity extends AppCompatActivity {
         setupRecyclerView();
         loadChatHeader();
         attachMessageListener();
+        loadCurrentUserName();
 
         sendBtn.setOnClickListener(v -> sendMessage());
 
@@ -143,6 +145,16 @@ public class ChatActivity extends AppCompatActivity {
                 });
     }
 
+    private void loadCurrentUserName() {
+        db.collection("users").document(currentUid).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        currentUserName = doc.getString("name");
+                        if (currentUserName == null) currentUserName = "User";
+                    }
+                });
+    }
+
     // ── Real-time listener ────────────────────────────────────────────────────
 
     private void attachMessageListener() {
@@ -196,7 +208,7 @@ public class ChatActivity extends AppCompatActivity {
         Message message = new Message(currentUid, text);
         messageEt.setText("");      // Clear immediately for responsive UX
 
-        chatRepo.sendMessage(connectionId, message)
+        chatRepo.sendMessage(connectionId, message, currentUserName)
                 .addOnFailureListener(e ->
                         Snackbar.make(sendBtn,
                                 "Failed to send. Check your connection.",

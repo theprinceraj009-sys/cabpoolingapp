@@ -10,11 +10,10 @@ import android.widget.LinearLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.princeraj.campustaxipooling.ChatActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.Connection;
@@ -35,7 +34,7 @@ public class ChatListFragment extends Fragment {
     private ChatListAdapter adapter;
     private final List<Connection> connections = new ArrayList<>();
 
-    private final RideRepository rideRepo = RideRepository.getInstance();
+    private ChatListViewModel viewModel;
 
     @Nullable
     @Override
@@ -53,7 +52,13 @@ public class ChatListFragment extends Fragment {
         emptyStateView = view.findViewById(R.id.emptyStateView);
 
         setupRecyclerView();
-        loadConnections();
+
+        viewModel = new ViewModelProvider(this).get(ChatListViewModel.class);
+        setupObservers();
+
+        if (savedInstanceState == null) {
+            viewModel.loadConnections();
+        }
     }
 
     private void setupRecyclerView() {
@@ -67,27 +72,17 @@ public class ChatListFragment extends Fragment {
         connectionsRecyclerView.setAdapter(adapter);
     }
 
-    private void loadConnections() {
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+    private void setupObservers() {
+        viewModel.getConnections().observe(getViewLifecycleOwner(), newConnections -> {
+            connections.clear();
+            if (newConnections != null) {
+                connections.addAll(newConnections);
+            }
+            adapter.notifyDataSetChanged();
 
-        rideRepo.getMyConnections(uid)
-                .addSnapshotListener((snapshots, error) -> {
-                    if (error != null || snapshots == null) return;
-
-                    connections.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        Connection conn = doc.toObject(Connection.class);
-                        if (conn != null) {
-                            connections.add(conn);
-                        }
-                    }
-
-                    adapter.notifyDataSetChanged();
-
-                    boolean empty = connections.isEmpty();
-                    connectionsRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
-                    emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
-                });
+            boolean empty = connections.isEmpty();
+            connectionsRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+            emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
+        });
     }
 }

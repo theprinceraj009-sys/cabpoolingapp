@@ -1,5 +1,6 @@
 package com.princeraj.campustaxipooling;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
@@ -29,7 +30,7 @@ public class RideDetailActivity extends AppCompatActivity {
 
     private TextView sourceText, destinationText, timeText, fareText, seatsText;
     private TextView posterInitial, posterName, preferencesText;
-    private MaterialButton requestJoinBtn, reportRideBtn;
+    private MaterialButton requestRideBtn, reportRideBtn;
 
     private final RideRepository rideRepo = RideRepository.getInstance();
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -53,17 +54,9 @@ public class RideDetailActivity extends AppCompatActivity {
         ImageView backBtn = findViewById(R.id.backBtn);
         backBtn.setOnClickListener(v -> finish());
 
-        requestJoinBtn.setOnClickListener(v -> requestJoin());
-        reportRideBtn.setOnClickListener(v -> {
-            Intent reportIntent = new Intent(this, ReportActivity.class);
-            reportIntent.putExtra(ReportActivity.EXTRA_TARGET_RIDE, rideId);
-            reportIntent.putExtra(ReportActivity.EXTRA_TARGET_TYPE, "RIDE");
-            if (currentRide != null) {
-                reportIntent.putExtra(ReportActivity.EXTRA_TARGET_UID,
-                        currentRide.getPostedByUid());
-            }
-            startActivity(reportIntent);
-        });
+        requestRideBtn.setOnClickListener(v -> requestJoin());
+        reportRideBtn.setOnClickListener(v ->
+                Toast.makeText(this, "Reporting coming soon", Toast.LENGTH_SHORT).show());
 
         loadRide();
     }
@@ -77,7 +70,7 @@ public class RideDetailActivity extends AppCompatActivity {
         posterInitial = findViewById(R.id.posterInitial);
         posterName = findViewById(R.id.posterName);
         preferencesText = findViewById(R.id.preferencesText);
-        requestJoinBtn = findViewById(R.id.requestJoinBtn);
+        requestRideBtn = findViewById(R.id.requestJoinBtn);
         reportRideBtn = findViewById(R.id.reportRideBtn);
     }
 
@@ -133,11 +126,11 @@ public class RideDetailActivity extends AppCompatActivity {
                 && currentUser.getUid().equals(ride.getPostedByUid());
 
         if (isOwner) {
-            requestJoinBtn.setText("This is your ride");
-            requestJoinBtn.setEnabled(false);
+            requestRideBtn.setText("This is your ride");
+            requestRideBtn.setEnabled(false);
         } else if (!ride.hasSeatsAvailable()) {
-            requestJoinBtn.setText("Ride is Full");
-            requestJoinBtn.setEnabled(false);
+            requestRideBtn.setText("Ride is Full");
+            requestRideBtn.setEnabled(false);
         }
     }
 
@@ -146,12 +139,12 @@ public class RideDetailActivity extends AppCompatActivity {
         if (user == null || currentRide == null) return;
 
         if (currentRide.getSeatsRemaining() <= 0) {
-            Snackbar.make(requestJoinBtn, "No seats available.", Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(requestRideBtn, "No seats available.", Snackbar.LENGTH_SHORT).show();
             return;
         }
 
-        requestJoinBtn.setEnabled(false);
-        requestJoinBtn.setText("Sending…");
+        requestRideBtn.setEnabled(false);
+        requestRideBtn.setText("Sending…");
 
         // Check for duplicate pending request from same user
         db.collection("rides").document(rideId)
@@ -161,8 +154,8 @@ public class RideDetailActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(existing -> {
                     if (!existing.isEmpty()) {
-                        requestJoinBtn.setText("Request Already Sent");
-                        Snackbar.make(requestJoinBtn,
+                        requestRideBtn.setText("Request Already Sent");
+                        Snackbar.make(requestRideBtn,
                                 "You already have a pending request for this ride.",
                                 Snackbar.LENGTH_SHORT).show();
                         return;
@@ -177,26 +170,26 @@ public class RideDetailActivity extends AppCompatActivity {
                                 SeatRequest request = new SeatRequest(
                                         user.getUid(), name, "");
 
-                                rideRepo.sendJoinRequest(rideId, request)
+                                rideRepo.sendJoinRequest(rideId, request, currentRide.getPostedByUid())
                                         .addOnSuccessListener(ref -> {
-                                            requestJoinBtn.setText("Request Sent ✓");
-                                            Snackbar.make(requestJoinBtn,
+                                            requestRideBtn.setText("Request Sent ✓");
+                                            Snackbar.make(requestRideBtn,
                                                     "Join request sent! Waiting for approval.",
                                                     Snackbar.LENGTH_LONG).show();
                                         })
                                         .addOnFailureListener(e -> {
-                                            requestJoinBtn.setEnabled(true);
-                                            requestJoinBtn.setText("Request to Join");
-                                            Snackbar.make(requestJoinBtn,
+                                            requestRideBtn.setEnabled(true);
+                                            requestRideBtn.setText("Request to Join");
+                                            Snackbar.make(requestRideBtn,
                                                     "Failed to send request: " + e.getMessage(),
                                                     Snackbar.LENGTH_SHORT).show();
                                         });
                             });
                 })
                 .addOnFailureListener(e -> {
-                    requestJoinBtn.setEnabled(true);
-                    requestJoinBtn.setText("Request to Join");
-                    Snackbar.make(requestJoinBtn,
+                    requestRideBtn.setEnabled(true);
+                    requestRideBtn.setText("Request to Join");
+                    Snackbar.make(requestRideBtn,
                             "Error checking existing requests.",
                             Snackbar.LENGTH_SHORT).show();
                 });

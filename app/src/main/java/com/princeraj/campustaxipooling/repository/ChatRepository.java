@@ -101,6 +101,7 @@ public class ChatRepository {
      * @param senderName   Display name of the sender (for the notification preview)
      */
     public Task<DocumentReference> sendMessage(String connectionId, Message message, String senderName) {
+        message.setSentAt(Timestamp.now());
         return db.collection(CONNECTIONS_COLLECTION)
                 .document(connectionId)
                 .collection(MESSAGES_SUB)

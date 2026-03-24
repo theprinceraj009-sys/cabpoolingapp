@@ -4,6 +4,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.WriteBatch;
@@ -114,23 +115,32 @@ public class RideRepository {
      * Accepts a seat request using a Firestore transaction.
      * Atomically: updates request status, decrements seatsRemaining,
      * updates ride status if full, creates a connection document.
+     *
+     * FIX: Reads latest ride document INSIDE the transaction to prevent overbooking.
      */
     public Task<Void> acceptSeatRequest(String rideId, String requestId,
-            String requesterUid, String requesterName,
-            String posterUid, int currentSeatsRemaining) {
+                                        String requesterUid, String requesterName,
+                                        String posterUid) {
         DocumentReference rideRef = db.collection(RIDES_COLLECTION).document(rideId);
         DocumentReference requestRef = rideRef.collection(SEAT_REQUESTS_SUB).document(requestId);
         DocumentReference connectionRef = db.collection(CONNECTIONS_COLLECTION).document();
 
         return db.runTransaction(transaction -> {
-            // 1. Update seatRequest status
+            // ── Step 1: Read latest ride state ──
+            DocumentSnapshot rideSnap = transaction.get(rideRef);
+            Long currentSeats = rideSnap.getLong("seatsRemaining");
+            if (currentSeats == null || currentSeats <= 0) {
+                throw new IllegalStateException("No seats remaining to accept this request.");
+            }
+
+            // ── Step 2: Update seatRequest status ──
             Map<String, Object> requestUpdate = new HashMap<>();
             requestUpdate.put("status", "ACCEPTED");
             requestUpdate.put("respondedAt", Timestamp.now());
             transaction.update(requestRef, requestUpdate);
 
-            // 2. Decrement seats
-            int newSeatsRemaining = currentSeatsRemaining - 1;
+            // ── Step 3: Decrement seats ──
+            long newSeatsRemaining = currentSeats - 1;
             Map<String, Object> rideUpdate = new HashMap<>();
             rideUpdate.put("seatsRemaining", newSeatsRemaining);
             if (newSeatsRemaining <= 0) {
@@ -139,7 +149,7 @@ public class RideRepository {
             rideUpdate.put("updatedAt", Timestamp.now());
             transaction.update(rideRef, rideUpdate);
 
-            // 3. Create connection document
+            // ── Step 4: Create connection document ──
             Connection connection = new Connection(
                     rideId, posterUid, requesterUid,
                     Arrays.asList(posterUid, requesterUid));
@@ -148,12 +158,12 @@ public class RideRepository {
 
             return null;
         }).continueWithTask(task -> {
-            if (!task.isSuccessful())
-                throw task.getException();
+            if (!task.isSuccessful()) throw task.getException();
             NotificationApi.notifyRequestUpdate(rideId, "ACCEPTED", requesterUid);
             return Tasks.forResult(null);
         });
     }
+
 
     /**
      * Rejects a seat request and notifies the joiner.

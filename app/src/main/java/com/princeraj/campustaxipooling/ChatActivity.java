@@ -5,6 +5,8 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.content.Intent;
+import android.net.Uri;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,12 +36,13 @@ import java.util.List;
  *  - Client-side moderation runs BEFORE every Firestore write
  *  - Blocked messages are stored with isBlocked=true (admin-visible, not shown to recipient)
  */
-public class ChatActivity extends AppCompatActivity {
+public class ChatActivity extends BaseActivity {
 
     private RecyclerView messagesRecyclerView;
     private TextInputEditText messageEt;
     private FloatingActionButton sendBtn;
     private TextView partnerInitialTv, partnerNameTv, rideRouteHeaderTv;
+    private ImageView callBtn;
 
     private MessageAdapter messageAdapter;
     private final List<Message> messages = new ArrayList<>();
@@ -96,6 +99,7 @@ public class ChatActivity extends AppCompatActivity {
         partnerInitialTv = findViewById(R.id.partnerInitial);
         partnerNameTv = findViewById(R.id.partnerName);
         rideRouteHeaderTv = findViewById(R.id.rideRouteHeader);
+        callBtn = findViewById(R.id.callBtn);
 
         ImageView backBtn = findViewById(R.id.backBtn);
         backBtn.setOnClickListener(v -> finish());
@@ -140,6 +144,20 @@ public class ChatActivity extends AppCompatActivity {
                                     partnerNameTv.setText(name);
                                     partnerInitialTv.setText(
                                             String.valueOf(name.charAt(0)).toUpperCase());
+
+                                    // ── PRIVACY CHECK: Only show call button if partner allows it ──
+                                    String phone = userDoc.getString("phoneNumber");
+                                    Boolean isVisible = userDoc.getBoolean("isPhoneVisibleToMatches");
+                                    if (phone != null && !phone.isEmpty() && Boolean.TRUE.equals(isVisible)) {
+                                        callBtn.setVisibility(View.VISIBLE);
+                                        callBtn.setOnClickListener(v -> {
+                                            Intent intent = new Intent(Intent.ACTION_DIAL);
+                                            intent.setData(Uri.parse("tel:" + phone));
+                                            startActivity(intent);
+                                        });
+                                    } else {
+                                        callBtn.setVisibility(View.GONE);
+                                    }
                                 });
                     }
                 });

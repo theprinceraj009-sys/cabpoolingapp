@@ -102,8 +102,16 @@ public class MyRidesAdapter extends RecyclerView.Adapter<MyRidesAdapter.MyRideVi
             }
             posterDept.setText("Posted by you");
 
-            // Status badge
-            statusBadge.setText(ride.getStatus() != null ? ride.getStatus() : "ACTIVE");
+            // Status badge (Auto-calculate completion)
+            String status = ride.getStatus() != null ? ride.getStatus() : "ACTIVE";
+            if ("ACTIVE".equals(status) && ride.getJourneyDateTime() != null &&
+                    ride.getJourneyDateTime().toDate().before(new java.util.Date())) {
+                status = "COMPLETED";
+            }
+            statusBadge.setText(status);
+            if ("COMPLETED".equals(status)) {
+                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+            }
 
             // Route
             sourceText.setText(ride.getSource());
@@ -123,7 +131,8 @@ public class MyRidesAdapter extends RecyclerView.Adapter<MyRidesAdapter.MyRideVi
             seatsText.setText(ride.getSeatsRemaining() + " left");
 
             // Button behaviour
-            if (ride.isActive()) {
+            boolean isActuallyActive = ride.isActive() && !"COMPLETED".equals(status);
+            if (isActuallyActive) {
                 // Primary: View Requests
                 viewRideBtn.setText("View Requests");
                 viewRideBtn.setBackgroundTintList(

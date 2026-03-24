@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -35,6 +36,7 @@ import java.util.List;
  */
 public class RideFeedFragment extends Fragment {
 
+    private ShimmerFrameLayout shimmerViewContainer;
     private RecyclerView ridesRecyclerView;
     private LinearLayout emptyStateView;
     private ExtendedFloatingActionButton postRideFab;
@@ -61,6 +63,7 @@ public class RideFeedFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        shimmerViewContainer = view.findViewById(R.id.shimmerViewContainer);
         ridesRecyclerView = view.findViewById(R.id.ridesRecyclerView);
         emptyStateView = view.findViewById(R.id.emptyStateView);
         postRideFab = view.findViewById(R.id.postRideFab);
@@ -127,6 +130,13 @@ public class RideFeedFragment extends Fragment {
         rideListener = rideRepo.getRideFeed("CU_CHANDIGARH", uid, currentLimit)
                 .addSnapshotListener((snapshots, error) -> {
                     isLoadingMore = false;
+                    
+                    // Stop and hide shimmer
+                    if (shimmerViewContainer != null && shimmerViewContainer.isShimmerStarted()) {
+                        shimmerViewContainer.stopShimmer();
+                        shimmerViewContainer.setVisibility(View.GONE);
+                    }
+
                     if (error != null || snapshots == null) return;
 
                     allRides.clear();
@@ -152,14 +162,15 @@ public class RideFeedFragment extends Fragment {
 
     private void filterRides(String query) {
         filteredRides.clear();
-        if (query.isEmpty()) {
+        String sanitizedQuery = query != null ? query.trim().toLowerCase() : "";
+
+        if (sanitizedQuery.isEmpty()) {
             filteredRides.addAll(allRides);
         } else {
-            String lower = query.toLowerCase();
             for (Ride ride : allRides) {
-                if ((ride.getSource() != null && ride.getSource().toLowerCase().contains(lower))
+                if ((ride.getSource() != null && ride.getSource().toLowerCase().contains(sanitizedQuery))
                         || (ride.getDestination() != null
-                        && ride.getDestination().toLowerCase().contains(lower))) {
+                        && ride.getDestination().toLowerCase().contains(sanitizedQuery))) {
                     filteredRides.add(ride);
                 }
             }
@@ -167,10 +178,16 @@ public class RideFeedFragment extends Fragment {
 
         adapter.notifyDataSetChanged();
 
-        // Show/hide empty state
+        // Show/hide empty state with custom message
         if (filteredRides.isEmpty()) {
             ridesRecyclerView.setVisibility(View.GONE);
             emptyStateView.setVisibility(View.VISIBLE);
+            
+            // Customize the standardized empty state
+            ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("🚕");
+            ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No rides found");
+            ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle))
+                    .setText(sanitizedQuery.isEmpty() ? "Be the first to post a campus ride!" : "Try adjusting your search query.");
         } else {
             ridesRecyclerView.setVisibility(View.VISIBLE);
             emptyStateView.setVisibility(View.GONE);

@@ -40,6 +40,33 @@
                 android:textColor="@color/text_primary"/>
         </LinearLayout>
 
+        <!-- Avatar Edit -->
+        <FrameLayout
+            android:id="@+id/avatarContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/profileImageView"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/bg_circle_avatar"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/CircleImageView"/>
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="bottom|end"
+                android:src="@android:drawable/ic_menu_edit"
+                android:backgroundTint="@color/brand_primary"
+                android:background="@drawable/bg_circle_avatar"
+                android:padding="6dp"
+                app:tint="@color/text_primary"/>
+        </FrameLayout>
+
         <!-- Name -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/nameLayout"
@@ -105,10 +132,20 @@
                 android:textColor="@color/text_primary"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchPrivacyPhone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Share phone number with matched riders"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp"
+            android:checked="true"/>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🔒 Your phone number is never shown publicly. Only your matched ride partner can see it after connection is established."
+            android:text="🔒 If disabled, matched riders must use the in-app chat."
             android:textSize="11sp"
             android:textColor="@color/text_hint"
             android:layout_marginBottom="28dp"/>

@@ -1,17 +1,24 @@
 package com.princeraj.campustaxipooling.admin;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.LoginActivity;
+import com.princeraj.campustaxipooling.BaseActivity;
 import com.princeraj.campustaxipooling.R;
+import com.princeraj.campustaxipooling.admin.AdminReportsFragment;
+import com.princeraj.campustaxipooling.admin.AdminUsersFragment;
+import com.princeraj.campustaxipooling.admin.AdminRidesFragment;
 
 /**
  * Admin Dashboard entry point.
@@ -22,7 +29,7 @@ import com.princeraj.campustaxipooling.R;
  *
  * Sub-screens loaded as Fragments into adminFragmentContainer.
  */
-public class AdminDashboardActivity extends AppCompatActivity {
+public class AdminDashboardActivity extends BaseActivity {
 
     private TextView adminEmailText;
     private TextView totalUsersCount, activeRidesCount, pendingReportsCount;

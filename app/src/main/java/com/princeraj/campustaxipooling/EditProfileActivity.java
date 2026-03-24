@@ -14,6 +14,19 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.repository.UserRepository;
 
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
+import androidx.activity.result.ActivityResultLauncher;
+import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import com.bumptech.glide.Glide;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.imageview.ShapeableImageView;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,11 +35,24 @@ import java.util.Map;
  * Writes directly to the Firestore users/{uid} document.
  * Phone number is stored but only surfaced after a connection is created.
  */
-public class EditProfileActivity extends AppCompatActivity {
+public class EditProfileActivity extends BaseActivity {
 
     private TextInputLayout nameLayout, departmentLayout, phoneLayout, rollNumberLayout;
     private TextInputEditText nameEt, departmentEt, phoneEt, rollNumberEt;
+    private MaterialSwitch switchPrivacyPhone;
+    private ShapeableImageView profileImageView;
     private MaterialButton saveBtn;
+
+    private Uri selectedImageUri = null;
+    private final ActivityResultLauncher<CropImageContractOptions> cropImage =
+            registerForActivityResult(new CropImageContract(), result -> {
+                if (result.isSuccessful()) {
+                    selectedImageUri = result.getUriContent();
+                    if (selectedImageUri != null) {
+                        profileImageView.setImageURI(selectedImageUri);
+                    }
+                }
+            });
 
     private final UserRepository userRepo = UserRepository.getInstance();
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -45,10 +71,14 @@ public class EditProfileActivity extends AppCompatActivity {
         departmentEt = findViewById(R.id.departmentEt);
         phoneEt = findViewById(R.id.phoneEt);
         rollNumberEt = findViewById(R.id.rollNumberEt);
+        switchPrivacyPhone = findViewById(R.id.switchPrivacyPhone);
+        profileImageView = findViewById(R.id.profileImageView);
         saveBtn = findViewById(R.id.saveBtn);
 
         ImageView backBtn = findViewById(R.id.backBtn);
         backBtn.setOnClickListener(v -> finish());
+        
+        findViewById(R.id.avatarContainer).setOnClickListener(v -> startCrop());
 
         prefillCurrentData();
 
@@ -66,26 +96,36 @@ public class EditProfileActivity extends AppCompatActivity {
                         String dept = doc.getString("department");
                         String phone = doc.getString("phoneNumber");
                         String roll = doc.getString("rollNumber");
+                        String avatarUrl = doc.getString("profileImageUrl");
+                        Boolean phonePrivacy = doc.getBoolean("isPhoneVisibleToMatches");
 
                         if (name != null) nameEt.setText(name);
                         if (dept != null) departmentEt.setText(dept);
                         if (phone != null) phoneEt.setText(phone);
                         
-                        if (roll != null) {
+                        // Handle Roll Number: Firestore value > Email Substring
+                        if (roll != null && !roll.isEmpty()) {
                             rollNumberEt.setText(roll);
                         } else if (user.getEmail() != null) {
                             String emailStr = user.getEmail();
                             int atIndex = emailStr.indexOf("@");
-                            if (atIndex > 0) {
-                                rollNumberEt.setText(emailStr.substring(0, atIndex));
-                            }
+                            if (atIndex > 0) rollNumberEt.setText(emailStr.substring(0, atIndex));
+                        }
+
+                        if (phonePrivacy != null) {
+                            switchPrivacyPhone.setChecked(phonePrivacy);
+                        } else {
+                            switchPrivacyPhone.setChecked(true); // default
+                        }
+
+                        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                            Glide.with(this).load(avatarUrl).into(profileImageView);
                         }
                     } else if (user.getEmail() != null) {
+                        // Brand new profile - fallback to email for Roll Number
                         String emailStr = user.getEmail();
                         int atIndex = emailStr.indexOf("@");
-                        if (atIndex > 0) {
-                            rollNumberEt.setText(emailStr.substring(0, atIndex));
-                        }
+                        if (atIndex > 0) rollNumberEt.setText(emailStr.substring(0, atIndex));
                     }
                 });
     }
@@ -124,22 +164,64 @@ public class EditProfileActivity extends AppCompatActivity {
         updates.put("role", "STUDENT"); // Default tag
         updates.put("email", user.getEmail());
         if (!phone.isEmpty()) updates.put("phoneNumber", phone);
+        updates.put("isPhoneVisibleToMatches", switchPrivacyPhone.isChecked());
         updates.put("updatedAt", com.google.firebase.Timestamp.now());
 
-        db.collection("users").document(user.getUid())
+        if (selectedImageUri != null) {
+            byte[] compressedBytes = compressImageForFreeTier(selectedImageUri);
+            if (compressedBytes != null) {
+                userRepo.uploadProfilePicture(user.getUid(), compressedBytes)
+                    .addOnSuccessListener(v -> completeProfileUpdate(updates, user.getUid()))
+                    .addOnFailureListener(e -> {
+                        setLoading(false);
+                        Snackbar.make(saveBtn, "Image upload failed", Snackbar.LENGTH_LONG).show();
+                    });
+                return; // Exit here, completeProfileUpdate runs on success
+            }
+        }
+        
+        completeProfileUpdate(updates, user.getUid());
+    }
+
+    private void completeProfileUpdate(Map<String, Object> updates, String uid) {
+        db.collection("users").document(uid)
                 .set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(v -> {
                     setLoading(false);
                     Snackbar.make(saveBtn, "Profile updated!", Snackbar.LENGTH_SHORT).show();
-                    // Delay finish to let snackbar show
                     saveBtn.postDelayed(this::finish, 1000);
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    Snackbar.make(saveBtn,
-                            "Failed to update: " + e.getMessage(),
-                            Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(saveBtn, "Failed to update: " + e.getMessage(), Snackbar.LENGTH_LONG).show();
                 });
+    }
+
+    private void startCrop() {
+        CropImageOptions options = new CropImageOptions();
+        options.imageSourceIncludeGallery = true;
+        options.imageSourceIncludeCamera = true;
+        options.aspectRatioX = 1;
+        options.aspectRatioY = 1;
+        options.fixAspectRatio = true;
+        options.cropShape = CropImageView.CropShape.OVAL;
+        cropImage.launch(new CropImageContractOptions(null, options));
+    }
+
+    private byte[] compressImageForFreeTier(Uri uri) {
+        try {
+            InputStream is = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (bitmap == null) return null;
+            
+            // Very aggressive WebP compression for Spark Plan limits
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.WEBP, 60, baos); 
+            return baos.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void setLoading(boolean loading) {

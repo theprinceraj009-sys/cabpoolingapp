@@ -14,7 +14,7 @@ import com.princeraj.campustaxipooling.repository.UserRepository;
  * Entry point. Checks auth state and routes accordingly.
  * Delay: 1.5 seconds for branding visibility.
  */
-public class SplashActivity extends AppCompatActivity {
+public class SplashActivity extends BaseActivity {
 
     private final UserRepository userRepo = UserRepository.getInstance();
 

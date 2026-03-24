@@ -26,7 +26,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🚗  My Rides"
+                android:text="@string/my_rides"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"/>
@@ -34,7 +34,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Rides you've posted or joined"
+                android:text="@string/my_rides_subtitle"
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:layout_marginTop="2dp"/>
@@ -44,7 +44,7 @@
             android:id="@+id/postNewRideBtn"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
-            android:text="+ Post"
+            android:text="@string/btn_post_short"
             android:textSize="12sp"
             android:backgroundTint="@color/brand_primary"
             app:cornerRadius="20dp"/>
@@ -56,49 +56,40 @@
         android:layout_height="1dp"
         android:background="@color/bg_divider"/>
 
+    <!-- Shimmer Loader -->
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmerViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        app:shimmer_auto_start="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <include layout="@layout/item_ride_card_shimmer"/>
+            <include layout="@layout/item_ride_card_shimmer"/>
+        </LinearLayout>
+    </com.facebook.shimmer.ShimmerFrameLayout>
+
     <!-- Tab: Posted rides list -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/myRidesRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:visibility="gone"
         android:paddingHorizontal="12dp"
         android:paddingTop="8dp"
         android:paddingBottom="80dp"
         android:clipToPadding="false"/>
 
     <!-- Empty state -->
-    <LinearLayout
+    <include
         android:id="@+id/emptyStateView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🚗"
-            android:textSize="56sp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No rides posted yet"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginTop="12dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Post your first campus ride!"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginTop="6dp"/>
-    </LinearLayout>
+        layout="@layout/view_empty_state"/>
 
 </LinearLayout>

@@ -26,7 +26,7 @@ import java.util.Locale;
 /**
  * Displays full details of a ride and allows the user to request a seat.
  */
-public class RideDetailActivity extends AppCompatActivity {
+public class RideDetailActivity extends BaseActivity {
 
     private TextView sourceText, destinationText, timeText, fareText, seatsText;
     private TextView posterInitial, posterName, preferencesText;

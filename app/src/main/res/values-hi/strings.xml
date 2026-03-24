@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">कैंपस टैक्सी</string>
+    <string name="tagline">आपकी कैंपस राइड, स्मार्ट और सुरक्षित।</string>
+    <string name="login_title">वापसी पर स्वागत है</string>
+    <string name="login_subtitle">राइड खोजने या साझा करने के लिए साइन इन करें</string>
+    <string name="register_title">कैंपस राइड्स में शामिल हों</string>
+    <string name="register_subtitle">शुरू करने के लिए अपने कैंपस ईमेल का उपयोग करें</string>
+    <string name="email_hint">कैंपस ईमेल (उदा. 22bca@cuchd.in)</string>
+    <string name="password_hint">पासवर्ड (न्यूनतम 8 वर्ण)</string>
+    <string name="name_hint">पूरा नाम</string>
+    <string name="roll_hint">रोल / कर्मचारी संख्या</string>
+    <string name="department_hint">विभाग (उदा. CSE, MBA)</string>
+    <string name="btn_login">साइन इन करें</string>
+    <string name="btn_register">खाता बनाएं</string>
+    <string name="btn_logout">लॉग आउट</string>
+    <string name="go_to_register">नए हैं? खाता बनाएं</string>
+    <string name="go_to_login">क्या आपके पास पहले से खाता है? साइन इन करें</string>
+    <string name="forgot_password">पासवर्ड भूल गए?</string>
+    <string name="email_domain_error">कृपया अपने कैंपस ईमेल (@cuchd.in) का उपयोग करें</string>
+    <string name="password_length_error">पासवर्ड कम से कम 8 वर्णों का होना चाहिए</string>
+    <string name="fill_all_fields">कृपया सभी आवश्यक फ़ील्ड भरें</string>
+    <string name="verify_email_title">अपना ईमेल सत्यापित करें</string>
+    <string name="verify_email_body">हमने आपके ईमेल पर एक सत्यापन लिंक भेजा है। कृपया जारी रखने से पहले सत्यापित करें।</string>
+    <string name="account_banned">आपका खाता निलंबित कर दिया गया है। एडमिन से संपर्क करें।</string>
+    <string name="post_ride">राइड पोस्ट करें</string>
+    <string name="find_ride">राइड खोजें</string>
+    <string name="my_rides">मेरी राइड्स</string>
+    <string name="chats">चैट्स</string>
+    <string name="profile">प्रोफ़ाइल</string>
+    
+    <!-- Settings & Localization -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="language_preferences">भाषा प्राथमिकताएं</string>
+
+    <!-- Ride Feed -->
+    <string name="find_ride_subtitle">आपके लिए उपलब्ध कैंपस पूल</string>
+    <string name="search_hint">कहाँ जाना है? (उदा. सेक्टर 17)</string>
+    <string name="post_ride_fab">राइड पोस्ट करें</string>
+
+    <!-- Profile -->
+    <string name="profile_details">प्रोफ़ाइल विवरण</string>
+    <string name="roll_number_label">रोल नंबर</string>
+    <string name="department_label">विभाग</string>
+    <string name="campus_label">कैंपस</string>
+    <string name="cu_chandigarh">चंडीगढ़ यूनिवर्सिटी</string>
+    <string name="edit_profile_btn">✏️ प्रोफ़ाइल संपादित करें</string>
+    <string name="settings_language_btn">⚙️ सेटिंग्स और भाषा</string>
+    <string name="sign_out_btn">साइन आउट</string>
+    <string name="stat_posted">पोस्ट की गई</string>
+    <string name="stat_joined">शामिल हुए</string>
+    <string name="free_tag">मुफ़्त</string>
+
+    <!-- My Rides -->
+    <string name="my_rides_subtitle">आपके द्वारा पोस्ट की गई या शामिल हुई राइड्स</string>
+    <string name="btn_post_short">+ पोस्ट</string>
+
+    <!-- Chats -->
+    <string name="chats_subtitle">आपके पूलिंग पार्टनर्स के साथ बातचीत</string>
+
+    <!-- Empty State -->
+    <string name="empty_title">अभी यहाँ कुछ नहीं है</string>
+    <string name="empty_desc">रिफ्रेश करें या बाद में देखें।</string>
+
+    <!-- Ride Status -->
+    <string name="status_active">सक्रिय</string>
+    <string name="status_completed">पूर्ण</string>
+</resources>

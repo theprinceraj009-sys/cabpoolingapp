@@ -19,8 +19,8 @@ import okhttp3.RequestBody;
  *
  * ──────────────────────────────────────────────────────
  * HOW TO UPDATE THE SERVER URL:
- *   After you deploy the Express server (functions/index.js) to Render.com,
- *   paste your public URL below (e.g. https://campus-taxi-api.onrender.com).
+ * After you deploy the Express server (functions/index.js) to Render.com,
+ * paste your public URL below (e.g. https://campus-taxi-api.onrender.com).
  * ──────────────────────────────────────────────────────
  */
 public class NotificationApi {
@@ -88,7 +88,7 @@ public class NotificationApi {
      * @param isBlocked    Whether the message was flagged/blocked
      */
     public static void notifyChatMessage(String connectionId, String senderUid,
-                                         String senderName, String text, boolean isBlocked) {
+            String senderName, String text, boolean isBlocked) {
         executor.execute(() -> {
             try {
                 JSONObject body = new JSONObject();

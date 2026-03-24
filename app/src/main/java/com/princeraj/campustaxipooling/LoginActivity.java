@@ -18,7 +18,7 @@ import com.princeraj.campustaxipooling.repository.UserRepository;
 /**
  * Login screen. Validates campus email domain and ban state before allowing entry.
  */
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private TextInputLayout emailLayout, passwordLayout;
     private TextInputEditText emailEt, passwordEt;
@@ -118,9 +118,10 @@ public class LoginActivity extends AppCompatActivity {
                             })
                             .addOnFailureListener(e -> {
                                 setLoading(false);
-                                // Network issue — allow login with caution
-                                startActivity(new Intent(this, HomeActivity.class));
-                                finishAffinity();
+                                Snackbar.make(loginBtn,
+                                        "Unable to verify account status. Please check your connection.",
+                                        Snackbar.LENGTH_LONG).show();
+                                userRepo.logout();
                             });
                 })
                 .addOnFailureListener(e -> {

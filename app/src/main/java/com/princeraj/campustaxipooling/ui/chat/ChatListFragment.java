@@ -83,6 +83,12 @@ public class ChatListFragment extends Fragment {
             boolean empty = connections.isEmpty();
             connectionsRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
             emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
+            
+            if (empty) {
+                ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("💬");
+                ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No chats yet");
+                ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText("Join or post a ride to start chatting!");
+            }
         });
     }
 }

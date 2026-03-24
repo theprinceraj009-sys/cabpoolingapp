@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
-    id("com.google.gms.google-services")
+
 }
 
 android {
@@ -56,6 +56,10 @@ dependencies {
 
     // Image loading (for profile photos and ride proofs)
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("com.vanniktech:android-image-cropper:4.5.0")
+
+    // Shimmer effect
+    implementation("com.facebook.shimmer:shimmer:0.5.0")
 
     // EncryptedSharedPreferences (Jetpack Security)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

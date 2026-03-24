@@ -22,15 +22,27 @@
             android:background="@drawable/bg_profile_header">
 
             <!-- Avatar circle -->
-            <TextView
-                android:id="@+id/avatarInitial"
+            <FrameLayout
                 android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:gravity="center"
-                android:textSize="32sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                android:background="@drawable/bg_circle_avatar"/>
+                android:layout_height="80dp">
+                
+                <TextView
+                    android:id="@+id/avatarInitial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@drawable/bg_circle_avatar"/>
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/profileImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/CircleImageView"/>
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/profileName"
@@ -84,7 +96,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Posted"
+                        android:text="@string/stat_posted"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:layout_marginTop="4dp"/>
@@ -116,7 +128,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Joined"
+                        android:text="@string/stat_joined"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:layout_marginTop="4dp"/>
@@ -147,7 +159,7 @@
                         android:id="@+id/tierLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="FREE"
+                        android:text="@string/free_tag"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:layout_marginTop="4dp"/>
@@ -173,7 +185,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="PROFILE DETAILS"
+                    android:text="@string/profile_details"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_hint"
@@ -192,7 +204,7 @@
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                         android:layout_height="wrap_content" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Roll Number" android:textSize="11sp" android:textColor="@color/text_hint"/>
+                            android:text="@string/roll_number_label" android:textSize="11sp" android:textColor="@color/text_hint"/>
                         <TextView android:id="@+id/rollNumberText" android:layout_width="wrap_content"
                             android:layout_height="wrap_content" android:textSize="14sp"
                             android:textColor="@color/text_primary" android:layout_marginTop="2dp"/>
@@ -214,7 +226,7 @@
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                         android:layout_height="wrap_content" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Department" android:textSize="11sp" android:textColor="@color/text_hint"/>
+                            android:text="@string/department_label" android:textSize="11sp" android:textColor="@color/text_hint"/>
                         <TextView android:id="@+id/departmentText" android:layout_width="wrap_content"
                             android:layout_height="wrap_content" android:textSize="14sp"
                             android:textColor="@color/text_primary" android:layout_marginTop="2dp"/>
@@ -236,11 +248,11 @@
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                         android:layout_height="wrap_content" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Campus" android:textSize="11sp" android:textColor="@color/text_hint"/>
+                            android:text="@string/campus_label" android:textSize="11sp" android:textColor="@color/text_hint"/>
                         <TextView android:id="@+id/campusText" android:layout_width="wrap_content"
                             android:layout_height="wrap_content" android:textSize="14sp"
                             android:textColor="@color/text_primary" android:layout_marginTop="2dp"
-                            android:text="Chandigarh University"/>
+                            android:text="@string/cu_chandigarh"/>
                     </LinearLayout>
                 </LinearLayout>
 
@@ -259,7 +271,7 @@
                 android:id="@+id/editProfileBtn"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:text="✏️  Edit Profile"
+                android:text="@string/edit_profile_btn"
                 android:textSize="14sp"
                 android:backgroundTint="@color/bg_card"
                 android:layout_marginBottom="10dp"
@@ -267,10 +279,21 @@
                 app:strokeColor="@color/brand_primary"/>
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/settingsBtn"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="@string/settings_language_btn"
+                android:textSize="14sp"
+                android:backgroundTint="@color/bg_card"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="@color/text_secondary"/>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/logoutBtn"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:text="Sign Out"
+                android:text="@string/sign_out_btn"
                 android:textSize="14sp"
                 android:textColor="@color/status_error"
                 android:backgroundTint="@color/bg_card"

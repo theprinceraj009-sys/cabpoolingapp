@@ -7,55 +7,90 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark">
 
-    <!-- App Bar -->
+    <!-- Modern Premium Header -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/bg_dark"
+        android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/bg_dark"
-            app:titleTextColor="@color/text_primary"
-            app:subtitle="Available Campus Rides"
-            app:subtitleTextColor="@color/text_secondary">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@color/bg_dark">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🚕  CampusPool"
-                android:textSize="18sp"
+                android:text="@string/find_ride"
+                android:textSize="28sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"/>
-
-        </androidx.appcompat.widget.Toolbar>
-
-        <!-- Search bar -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/searchLayout"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Search routes (e.g. Sector 17)"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="12dp"
-            app:startIconDrawable="@android:drawable/ic_menu_search">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/searchEt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text"
                 android:textColor="@color/text_primary"
-                android:imeOptions="actionSearch"
-                android:singleLine="true"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/find_ride_subtitle"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Search Bar Container -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_card"
+                android:paddingHorizontal="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center_vertical"
+                    android:src="@android:drawable/ic_menu_search"
+                    app:tint="@color/text_secondary"/>
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/searchEt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="36dp"
+                    android:background="@null"
+                    android:hint="@string/search_hint"
+                    android:textColorHint="@color/text_secondary"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:imeOptions="actionSearch"
+                    android:singleLine="true"/>
+            </FrameLayout>
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Shimmer Loader -->
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmerViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="6dp"
+        app:shimmer_auto_start="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/item_ride_card_shimmer"/>
+            <include layout="@layout/item_ride_card_shimmer"/>
+            <include layout="@layout/item_ride_card_shimmer"/>
+            <include layout="@layout/item_ride_card_shimmer"/>
+        </LinearLayout>
+    </com.facebook.shimmer.ShimmerFrameLayout>
 
     <!-- Ride List -->
     <androidx.recyclerview.widget.RecyclerView
@@ -65,41 +100,14 @@
         android:paddingHorizontal="12dp"
         android:paddingBottom="80dp"
         android:clipToPadding="false"
+        android:visibility="gone"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
     <!-- Empty state -->
-    <LinearLayout
+    <include
         android:id="@+id/emptyStateView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🚗"
-            android:textSize="56sp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No rides posted yet"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginTop="12dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Be the first to post a campus ride!"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginTop="6dp"/>
-    </LinearLayout>
+        layout="@layout/view_empty_state"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
     <!-- FAB: Post a Ride -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -109,7 +117,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
         android:layout_marginBottom="72dp"
-        android:text="Post a Ride"
+        android:text="@string/post_ride_fab"
         android:textColor="@color/white"
         app:icon="@android:drawable/ic_input_add"
         app:iconTint="@color/white"

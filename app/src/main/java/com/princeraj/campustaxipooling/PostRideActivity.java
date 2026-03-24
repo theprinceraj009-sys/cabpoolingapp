@@ -25,7 +25,7 @@ import java.util.Calendar;
  * Screen for posting a new ride.
  * Validates all fields before writing to Firestore via RideRepository.
  */
-public class PostRideActivity extends AppCompatActivity {
+public class PostRideActivity extends BaseActivity {
 
     private TextInputLayout sourceLayout, destinationLayout;
     private TextInputLayout dateLayout, timeLayout, fareLayout, seatsLayout;

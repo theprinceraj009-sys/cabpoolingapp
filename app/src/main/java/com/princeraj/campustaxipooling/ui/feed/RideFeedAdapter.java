@@ -93,8 +93,16 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
             // Department (if available — would require denormalized field or join)
             posterDept.setText("Campus Member");
 
-            // Status badge
-            statusBadge.setText(ride.getStatus() != null ? ride.getStatus() : "ACTIVE");
+            // Status badge (Auto-calculate completion)
+            String status = ride.getStatus() != null ? ride.getStatus() : "ACTIVE";
+            if ("ACTIVE".equals(status) && ride.getJourneyDateTime() != null &&
+                    ride.getJourneyDateTime().toDate().before(new java.util.Date())) {
+                status = "COMPLETED";
+            }
+            statusBadge.setText(status);
+            if ("COMPLETED".equals(status)) {
+                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+            }
 
             // Route
             sourceText.setText(ride.getSource());
@@ -121,8 +129,11 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
             seatsText.setText(ride.getSeatsRemaining() + " seat"
                     + (ride.getSeatsRemaining() != 1 ? "s" : "") + " left");
 
-            // Disable button if no seats
-            if (!ride.hasSeatsAvailable()) {
+            // Disable button if no seats or if completed
+            if ("COMPLETED".equals(status)) {
+                viewRideBtn.setText("Ride Ended");
+                viewRideBtn.setEnabled(false);
+            } else if (!ride.hasSeatsAvailable()) {
                 viewRideBtn.setText("Ride Full");
                 viewRideBtn.setEnabled(false);
             } else {

@@ -36,7 +36,7 @@ import java.util.Locale;
  *   3. Sets ride status → FULL if no seats left
  *   4. Creates a Connection document (unlocks chat)
  */
-public class SeatRequestsActivity extends AppCompatActivity {
+public class SeatRequestsActivity extends BaseActivity {
 
     private TextView rideRouteSubtitle, seatsRemainingInfo, rideDateInfo, pendingCountBadge;
     private RecyclerView requestsRecyclerView;
@@ -147,6 +147,12 @@ public class SeatRequestsActivity extends AppCompatActivity {
                     boolean empty = pendingRequests.isEmpty();
                     requestsRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
                     emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
+
+                    if (empty) {
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("📭");
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No pending requests");
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText("Students' ride requests will appear here.");
+                    }
                 });
     }
 
@@ -170,8 +176,8 @@ public class SeatRequestsActivity extends AppCompatActivity {
                         request.getRequestId(),
                         request.getRequesterUid(),
                         request.getRequesterName(),
-                        currentUid,
-                        currentRide.getSeatsRemaining())
+                        currentUid)
+
                 .addOnSuccessListener(aVoid -> {
                     // Update local ride state so next acceptance checks correct seat count
                     currentRide.setSeatsRemaining(currentRide.getSeatsRemaining() - 1);

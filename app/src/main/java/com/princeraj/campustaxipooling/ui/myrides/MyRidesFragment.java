@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -33,6 +34,7 @@ import java.util.List;
  */
 public class MyRidesFragment extends Fragment {
 
+    private ShimmerFrameLayout shimmerViewContainer;
     private RecyclerView myRidesRecyclerView;
     private LinearLayout emptyStateView;
     private MaterialButton postNewRideBtn;
@@ -54,6 +56,7 @@ public class MyRidesFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        shimmerViewContainer = view.findViewById(R.id.shimmerViewContainer);
         myRidesRecyclerView = view.findViewById(R.id.myRidesRecyclerView);
         emptyStateView = view.findViewById(R.id.emptyStateView);
         postNewRideBtn = view.findViewById(R.id.postNewRideBtn);
@@ -89,6 +92,12 @@ public class MyRidesFragment extends Fragment {
 
         rideRepo.getMyPostedRides(uid)
                 .addSnapshotListener((snapshots, error) -> {
+                    // Stop and hide shimmer
+                    if (shimmerViewContainer != null && shimmerViewContainer.isShimmerStarted()) {
+                        shimmerViewContainer.stopShimmer();
+                        shimmerViewContainer.setVisibility(View.GONE);
+                    }
+
                     if (error != null || snapshots == null) return;
 
                     myRides.clear();
@@ -104,6 +113,12 @@ public class MyRidesFragment extends Fragment {
                     boolean empty = myRides.isEmpty();
                     myRidesRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
                     emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
+
+                    if (empty) {
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("🚗");
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No rides posted yet");
+                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText("Post your first campus ride!");
+                    }
                 });
     }
 }

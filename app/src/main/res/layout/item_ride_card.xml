@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ride card item used in the RecyclerView feed -->
+<!-- Ride card item — Uber/Ola Premium Style -->
 <androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginVertical="6dp"
+    android:layout_marginHorizontal="2dp"
     app:cardBackgroundColor="@color/bg_card"
     app:cardCornerRadius="16dp"
-    app:cardElevation="4dp">
+    app:cardElevation="6dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,25 +17,27 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Row 1: Poster name + status badge -->
+        <!-- Row 1: Poster avatar + name + status badge -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="14dp">
 
+            <!-- Avatar circle with initial -->
             <TextView
                 android:id="@+id/posterInitial"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:gravity="center"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@color/white"
-                android:background="@drawable/bg_circle_primary"
-                android:layout_marginEnd="10dp"/>
+                android:textColor="@color/black"
+                android:background="@drawable/bg_circle_yellow"
+                android:layout_marginEnd="12dp"/>
 
+            <!-- Name & Department -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -76,26 +79,46 @@
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/bg_divider"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="14dp"/>
 
-        <!-- Row 2: Route (Source → Dest) -->
+        <!-- Route: Source → Destination with indicator dots -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="10dp">
+            android:layout_marginBottom="12dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📍"
-                android:textSize="16sp"
-                android:layout_marginEnd="8dp"/>
-
+            <!-- Route indicator column -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="20dp"
                 android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_marginEnd="12dp"
+                android:layout_marginTop="3dp">
+
+                <View
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_dot_green"/>
+
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="24dp"
+                    android:background="@color/bg_divider"
+                    android:layout_marginVertical="2dp"/>
+
+                <View
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_dot_yellow"/>
+            </LinearLayout>
+
+            <!-- Source & Destination labels -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
@@ -104,15 +127,8 @@
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="→"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary"
-                    android:paddingVertical="2dp"/>
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="20dp"/>
 
                 <TextView
                     android:id="@+id/destinationText"
@@ -120,53 +136,62 @@
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="@color/brand_primary_light"/>
+                    android:textColor="@color/brand_secondary"/>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Row 3: Time | Fare | Seats chips -->
+        <!-- Info chips: Time | Fare | Seats -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginBottom="14dp">
 
-            <!-- Time -->
+            <!-- Time chip -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:gravity="center_horizontal"
+                android:background="@color/bg_input"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🕐"
-                    android:textSize="16sp"/>
+                    android:textSize="15sp"/>
 
                 <TextView
                     android:id="@+id/timeText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textColor="@color/text_secondary"
-                    android:gravity="center"/>
+                    android:gravity="center"
+                    android:layout_marginTop="2dp"/>
             </LinearLayout>
 
-            <!-- Fare -->
+            <View android:layout_width="4dp" android:layout_height="0dp"/>
+
+            <!-- Fare chip (yellow) -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:gravity="center_horizontal"
+                android:background="@color/bg_input"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="💰"
-                    android:textSize="16sp"/>
+                    android:text="₹"
+                    android:textSize="15sp"
+                    android:textColor="@color/brand_secondary"
+                    android:textStyle="bold"/>
 
                 <TextView
                     android:id="@+id/fareText"
@@ -175,41 +200,49 @@
                     android:textSize="12sp"
                     android:textColor="@color/brand_secondary"
                     android:textStyle="bold"
-                    android:gravity="center"/>
+                    android:gravity="center"
+                    android:layout_marginTop="2dp"/>
             </LinearLayout>
 
-            <!-- Seats -->
+            <View android:layout_width="4dp" android:layout_height="0dp"/>
+
+            <!-- Seats chip -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:gravity="center_horizontal"
+                android:background="@color/bg_input"
+                android:padding="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="💺"
-                    android:textSize="16sp"/>
+                    android:textSize="15sp"/>
 
                 <TextView
                     android:id="@+id/seatsText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textColor="@color/text_secondary"
-                    android:gravity="center"/>
+                    android:gravity="center"
+                    android:layout_marginTop="2dp"/>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- CTA Button -->
+        <!-- Yellow CTA Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/viewRideBtn"
+            style="@style/Widget.CampusTaxi.Button.Yellow"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="48dp"
             android:text="View &amp; Request Seat"
             android:textSize="13sp"
-            android:backgroundTint="@color/brand_primary"
+            android:textColor="@color/black"
+            android:textStyle="bold"
             app:cornerRadius="10dp"/>
 
     </LinearLayout>

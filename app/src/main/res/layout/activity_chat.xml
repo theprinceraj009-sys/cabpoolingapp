@@ -68,6 +68,18 @@
                     android:maxLines="1"
                     android:ellipsize="end"/>
             </LinearLayout>
+
+            <!-- Call button -->
+            <ImageView
+                android:id="@+id/callBtn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@android:drawable/stat_sys_phone_call"
+                android:padding="8dp"
+                android:visibility="gone"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/brand_secondary"
+                android:contentDescription="Call Partner"/>
         </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 

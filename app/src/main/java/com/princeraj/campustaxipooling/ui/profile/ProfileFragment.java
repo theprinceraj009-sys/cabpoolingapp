@@ -18,6 +18,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.EditProfileActivity;
 import com.princeraj.campustaxipooling.LoginActivity;
+import com.princeraj.campustaxipooling.ui.settings.SettingsActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.User;
 import com.princeraj.campustaxipooling.repository.RideRepository;
@@ -34,7 +35,8 @@ public class ProfileFragment extends Fragment {
     private TextView avatarInitial, profileName, profileEmail;
     private TextView ridesPostedCount, ridesJoinedCount, tierBadge, tierLabel;
     private TextView rollNumberText, departmentText;
-    private MaterialButton editProfileBtn, logoutBtn;
+    private MaterialButton editProfileBtn, settingsBtn, logoutBtn;
+    private com.google.android.material.imageview.ShapeableImageView profileImageView;
 
     private final UserRepository userRepo = UserRepository.getInstance();
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -52,6 +54,7 @@ public class ProfileFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         avatarInitial = view.findViewById(R.id.avatarInitial);
+        profileImageView = view.findViewById(R.id.profileImageView);
         profileName = view.findViewById(R.id.profileName);
         profileEmail = view.findViewById(R.id.profileEmail);
         ridesPostedCount = view.findViewById(R.id.ridesPostedCount);
@@ -61,10 +64,14 @@ public class ProfileFragment extends Fragment {
         rollNumberText = view.findViewById(R.id.rollNumberText);
         departmentText = view.findViewById(R.id.departmentText);
         editProfileBtn = view.findViewById(R.id.editProfileBtn);
+        settingsBtn = view.findViewById(R.id.settingsBtn);
         logoutBtn = view.findViewById(R.id.logoutBtn);
 
         editProfileBtn.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditProfileActivity.class)));
+
+        settingsBtn.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), SettingsActivity.class)));
 
         logoutBtn.setOnClickListener(v -> {
             userRepo.logout();
@@ -101,6 +108,7 @@ public class ProfileFragment extends Fragment {
         String roll = doc.getString("rollNumber");
         String dept = doc.getString("department");
         String tier = doc.getString("subscriptionTier");
+        String avatarUrl = doc.getString("profileImageUrl");
         
         if ((roll == null || roll.trim().isEmpty()) && email != null) {
             int atIndex = email.indexOf("@");
@@ -109,7 +117,7 @@ public class ProfileFragment extends Fragment {
             }
         }
         
-        if (name == null) name = "Campus Member";
+        if (name == null || name.isEmpty()) name = "Campus Member";
         if (roll == null || roll.trim().isEmpty()) roll = "N/A";
         if (dept == null) dept = "N/A";
         if (tier == null) tier = "FREE";
@@ -119,6 +127,17 @@ public class ProfileFragment extends Fragment {
         avatarInitial.setText(String.valueOf(name.charAt(0)).toUpperCase());
         rollNumberText.setText(roll);
         departmentText.setText(dept);
+
+        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+            avatarInitial.setText(""); // clear text
+            com.bumptech.glide.Glide.with(this)
+                .load(avatarUrl)
+                .circleCrop()
+                .into(profileImageView);
+        } else {
+            profileImageView.setImageDrawable(null);
+            avatarInitial.setText(String.valueOf(name.charAt(0)).toUpperCase());
+        }
 
         // Tier display
         if ("PREMIUM".equals(tier)) {

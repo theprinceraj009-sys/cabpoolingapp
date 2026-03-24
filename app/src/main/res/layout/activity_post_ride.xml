@@ -202,12 +202,15 @@
         <!-- Submit Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/postRideBtn"
+            style="@style/Widget.CampusTaxi.Button.Yellow"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Post Ride 🚕"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:backgroundTint="@color/brand_primary"/>
+            android:textColor="@color/black"
+            app:cornerRadius="12dp"/>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
+

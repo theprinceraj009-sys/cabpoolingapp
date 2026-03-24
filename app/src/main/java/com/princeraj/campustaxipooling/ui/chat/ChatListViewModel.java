@@ -59,13 +59,29 @@ public class ChatListViewModel extends ViewModel {
 
                     if (snapshots == null) return;
 
-                    List<Connection> currentConnections = new ArrayList<>();
+                    // Group by partner to avoid showing multiple chats for the same person
+                    java.util.Map<String, Connection> uniquePartners = new java.util.HashMap<>();
+                    String myUid = FirebaseAuth.getInstance().getUid();
+
                     for (DocumentSnapshot doc : snapshots.getDocuments()) {
                         Connection conn = doc.toObject(Connection.class);
                         if (conn != null && conn.isActive()) {
-                            currentConnections.add(conn);
+                            String partnerUid = myUid.equals(conn.getPosterUid()) 
+                                    ? conn.getJoinerUid() : conn.getPosterUid();
+                            
+                            if (partnerUid == null) continue;
+
+                            // Keep the latest connection for this partner
+                            if (!uniquePartners.containsKey(partnerUid) || 
+                                (conn.getConnectedAt() != null && 
+                                 uniquePartners.get(partnerUid).getConnectedAt() != null &&
+                                 conn.getConnectedAt().compareTo(uniquePartners.get(partnerUid).getConnectedAt()) > 0)) {
+                                uniquePartners.put(partnerUid, conn);
+                            }
                         }
                     }
+
+                    List<Connection> currentConnections = new ArrayList<>(uniquePartners.values());
 
                     // Sort locally by connectedAt (DESCENDING)
                     currentConnections.sort((c1, c2) -> {

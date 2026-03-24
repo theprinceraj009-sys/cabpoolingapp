@@ -1,93 +1,118 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Core helper functions
+
+    // ─── 🛡️ Helper Functions ──────────────────────────────────────────────────────
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(uid) {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // 1. Users Collection
+    // Server-side admin check: reads the user's own profile field isAdmin
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // CRITICAL: Block all writes for banned users
+    function isNotBanned() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isUserBanned', false) != true;
+    }
+
+    // ─── 1. Users Collection ────────────────────────────────────────────────────
     match /users/{userId} {
-      // Anyone logged in can read public profiles
       allow read: if isAuthenticated();
-      // Users can only create or update their own profile
-      allow create, update: if isOwner(userId);
-      // No one can dynamically delete their user doc from the client
+      // Owner can create their initial profile once
+      allow create: if isOwner(userId);
+      // Owner can update, but must NOT be banned. Admins can always toggle ban/admin status.
+      allow update: if (isOwner(userId) && isNotBanned()) || isAdmin();
       allow delete: if false;
-      
-      // User Notifications Sub-collection
+
       match /notifications/{notifId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) && isNotBanned();
       }
     }
 
-    // 2. Rides Collection
+    // ─── 2. Rides Collection ────────────────────────────────────────────────────
     match /rides/{rideId} {
-      // Anyone logged in can browse the active ride feed
       allow read: if isAuthenticated();
-      
-      // Ride creation demands the postedByUid matches the requester's identity
-      allow create: if isAuthenticated() && request.resource.data.postedByUid == request.auth.uid;
-      
-      // Updates allowed only if the user owns the ride
-      allow update: if isAuthenticated() && resource.data.postedByUid == request.auth.uid;
-      
-      // Soft deletion natively handles logical deletes
+
+      // Poster must beauthenticated and not banned
+      allow create: if isNotBanned()
+        && request.resource.data.postedByUid == request.auth.uid
+        && request.resource.data.seats is int
+        && request.resource.data.seats >= 1
+        && request.resource.data.fare is number
+        && request.resource.data.fare >= 0;
+
+      // Only poster (if not banned) or Admin can update metadata or status
+      allow update: if (resource.data.postedByUid == request.auth.uid && isNotBanned()) || isAdmin();
+
       allow delete: if false;
 
-      // Seat Requests Sub-collection
       match /seatRequests/{requestId} {
-        // The ride poster OR the person making the request can view it
         allow read: if isAuthenticated();
+        // Joiner must not be banned to request seats
+        allow create: if isNotBanned()
+          && request.resource.data.requesterUid == request.auth.uid;
         
-        // Anyone can create a request, but requesterUid must be their own
-        allow create: if isAuthenticated() && request.resource.data.requesterUid == request.auth.uid;
-        
-        // Requester can update (cancel), Poster can update (accept/reject)
-        allow update: if isAuthenticated() 
-          && (resource.data.requesterUid == request.auth.uid 
-              || get(/databases/$(database)/documents/rides/$(rideId)).data.postedByUid == request.auth.uid);
-              
+        // Updates (Accept/Deny) allowed for Poster (if not banned) or Admin
+        allow update: if (resource.data.requesterUid == request.auth.uid && isNotBanned())
+                      || (get(/databases/$(database)/documents/rides/$(rideId)).data.postedByUid == request.auth.uid && isNotBanned())
+                      || isAdmin();
         allow delete: if false;
       }
     }
 
-    // 3. Connections & Chats Collection
+    // ─── 3. Connections & Chats ───────────────────────────────────────────────
     match /connections/{connectionId} {
-      // Users can ONLY view the connection metadata if they are inside the participants array
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow read: if isAuthenticated()
+        && (request.auth.uid in resource.data.participants || isAdmin());
       
-      // Connected users are formed via transaction in RideRepository
-      allow create: if isAuthenticated();
-      // No ad-hoc updates from either client to connections metadata allowed immediately, 
-      // preventing chat state hacking
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Creating a connection requires being a match/participant
+      allow create: if isNotBanned()
+        && request.auth.uid in request.resource.data.participants;
+      
+      allow update: if isNotBanned()
+        && request.auth.uid in resource.data.participants;
+      
       allow delete: if false;
 
-      // Messages Sub-collection
       match /messages/{messageId} {
-        // Can only read and write messages if they are participating in the connection
-        allow read: if isAuthenticated() 
-           && request.auth.uid in get(/databases/$(database)/documents/connections/$(connectionId)).data.participants;
-           
-        allow create: if isAuthenticated() 
-           && request.resource.data.senderUid == request.auth.uid
-           && request.auth.uid in get(/databases/$(database)/documents/connections/$(connectionId)).data.participants;
-           
+        allow read: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/connections/$(connectionId)).data.participants;
+
+        // Messaging strictly forbidden for banned users
+        allow create: if isNotBanned()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/connections/$(connectionId)).data.participants
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+
         allow update, delete: if false;
       }
     }
 
-    // 4. Reports Collection
+    // ─── 4. Reports Collection ──────────────────────────────────────────────────
     match /reports/{reportId} {
-      // Anyone can submit a report, but only admins (via cloud functions/dashboard) can read it
-      allow create: if isAuthenticated() && request.resource.data.reporterUid == request.auth.uid;
-      allow read, update, delete: if false;
+      // Any non-banned user can report another user
+      allow create: if isNotBanned()
+        && request.resource.data.reporterUid == request.auth.uid;
+
+      // Only admins manage the report resolution flow
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ─── 5. Audit & ERP Traceability ──────────────────────────────────────────
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Cloud Functions Only
     }
   }
 }

@@ -104,38 +104,8 @@
         android:clipToPadding="false"/>
 
     <!-- Empty state -->
-    <LinearLayout
+    <include
         android:id="@+id/emptyStateView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📭"
-            android:textSize="52sp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No pending requests"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginTop="12dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="When students request to join\nyour ride, they'll appear here."
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginTop="6dp"
-            android:gravity="center"/>
-    </LinearLayout>
+        layout="@layout/view_empty_state"/>
 
 </LinearLayout>

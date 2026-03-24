@@ -6,6 +6,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import com.princeraj.campustaxipooling.model.User;
 
 import java.util.HashMap;
@@ -22,6 +24,7 @@ public class UserRepository {
 
     private final FirebaseAuth auth;
     private final FirebaseFirestore db;
+    private final FirebaseStorage storage;
 
     // Singleton
     private static UserRepository instance;
@@ -29,6 +32,7 @@ public class UserRepository {
     private UserRepository() {
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
     }
 
     public static UserRepository getInstance() {
@@ -139,6 +143,33 @@ public class UserRepository {
                         return Boolean.TRUE.equals(banned);
                     }
                     return false;
+                });
+    }
+
+    // ── Storage Operations ──────────────────────────────────────────────────
+
+    /**
+     * Uploads heavily compressed WebP image bytes to Firebase Storage to respect free-tier limits.
+     * Maps the resulting public URL back to the user's Firestore profile.
+     */
+    public Task<Void> uploadProfilePicture(String uid, byte[] compressedImageBytes) {
+        StorageReference profileRef = storage.getReference().child("profile_images/" + uid + ".webp");
+        
+        return profileRef.putBytes(compressedImageBytes)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful() && task.getException() != null) {
+                        throw task.getException();
+                    }
+                    return profileRef.getDownloadUrl();
+                })
+                .continueWithTask(uriTask -> {
+                    if (!uriTask.isSuccessful() && uriTask.getException() != null) {
+                        throw uriTask.getException();
+                    }
+                    String downloadUrl = uriTask.getResult().toString();
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("profileImageUrl", downloadUrl);
+                    return db.collection(USERS_COLLECTION).document(uid).update(updates);
                 });
     }
 }

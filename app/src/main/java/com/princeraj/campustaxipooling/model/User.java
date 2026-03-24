@@ -22,6 +22,9 @@ public class User {
     private String subscriptionTier; // "FREE" | "PREMIUM"
     private boolean isBanned;
     private boolean isAdmin;      // Explicit boolean for Firestore rules & guard checks
+    // Phase 6: Privacy
+    private boolean isPhoneVisibleToMatches = true;
+    
     private String banReason;
     private long reportCount;
     private String fcmToken;
@@ -82,6 +85,10 @@ public class User {
     public void setSubscriptionTier(String subscriptionTier) { this.subscriptionTier = subscriptionTier; }
     public void setBanned(boolean banned) { isBanned = banned; }
     public void setAdmin(boolean admin) { isAdmin = admin; }
+    
+    public boolean isPhoneVisibleToMatches() { return isPhoneVisibleToMatches; }
+    public void setPhoneVisibleToMatches(boolean phoneVisibleToMatches) { isPhoneVisibleToMatches = phoneVisibleToMatches; }
+    
     public void setBanReason(String banReason) { this.banReason = banReason; }
     public void setReportCount(long reportCount) { this.reportCount = reportCount; }
     public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }

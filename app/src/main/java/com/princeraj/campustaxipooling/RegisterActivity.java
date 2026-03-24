@@ -17,7 +17,7 @@ import com.princeraj.campustaxipooling.repository.UserRepository;
  * Registration screen. Collects name, roll number, department, campus email, and password.
  * Enforces campus email domain before calling Firebase Auth.
  */
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends BaseActivity {
 
     private TextInputLayout nameLayout, rollLayout, departmentLayout, emailLayout, passwordLayout;
     private TextInputEditText nameEt, rollEt, departmentEt, emailEt, passwordEt;
@@ -112,7 +112,7 @@ public class RegisterActivity extends AppCompatActivity {
                             Snackbar.LENGTH_LONG).show();
                     // Sign out immediately — force email verification first
                     userRepo.logout();
-                    new android.os.Handler().postDelayed(() -> {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                         startActivity(new Intent(this, LoginActivity.class));
                         finishAffinity();
                     }, 2000);

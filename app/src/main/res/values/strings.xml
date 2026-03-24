@@ -27,4 +27,41 @@
     <string name="my_rides">My Rides</string>
     <string name="chats">Chats</string>
     <string name="profile">Profile</string>
+    
+    <!-- Settings & Localization -->
+    <string name="settings_title">Settings</string>
+    <string name="language_preferences">Language Preferences</string>
+    
+    <!-- Ride Feed -->
+    <string name="find_ride_subtitle">Available campus pools for you</string>
+    <string name="search_hint">Where to? (e.g. Sector 17)</string>
+    <string name="post_ride_fab">Post a Ride</string>
+
+    <!-- Profile -->
+    <string name="profile_details">PROFILE DETAILS</string>
+    <string name="roll_number_label">Roll Number</string>
+    <string name="department_label">Department</string>
+    <string name="campus_label">Campus</string>
+    <string name="cu_chandigarh">Chandigarh University</string>
+    <string name="edit_profile_btn">✏️  Edit Profile</string>
+    <string name="settings_language_btn">⚙️  Settings &amp; Language</string>
+    <string name="sign_out_btn">Sign Out</string>
+    <string name="stat_posted">Posted</string>
+    <string name="stat_joined">Joined</string>
+    <string name="free_tag">FREE</string>
+
+    <!-- My Rides -->
+    <string name="my_rides_subtitle">Rides you\'ve posted or joined</string>
+    <string name="btn_post_short">+ Post</string>
+
+    <!-- Chats -->
+    <string name="chats_subtitle">Conversations with your pooling partners</string>
+
+    <!-- Empty State -->
+    <string name="empty_title">Nothing here yet</string>
+    <string name="empty_desc">Try refreshing or checking back later.</string>
+
+    <!-- Ride Status -->
+    <string name="status_active">ACTIVE</string>
+    <string name="status_completed">COMPLETED</string>
 </resources>

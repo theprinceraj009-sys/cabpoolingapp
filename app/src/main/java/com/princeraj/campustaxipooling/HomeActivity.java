@@ -16,7 +16,7 @@ import com.princeraj.campustaxipooling.ui.profile.ProfileFragment;
  * Shell activity hosting the 4 bottom-navigation tabs.
  * Each tab is a Fragment — no Activity switching for tab changes.
  */
-public class HomeActivity extends AppCompatActivity {
+public class HomeActivity extends BaseActivity {
 
     private BottomNavigationView bottomNav;
 

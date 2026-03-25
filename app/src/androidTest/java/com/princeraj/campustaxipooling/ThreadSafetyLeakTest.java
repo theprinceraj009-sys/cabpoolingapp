@@ -34,7 +34,7 @@ public class ThreadSafetyLeakTest {
     @Test(expected = IllegalStateException.class)
     public void testDatabaseAccessOnMainThreadFails() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-            CampusTaxiDatabase db = CampusTaxiDatabase.getDatabase(
+            CampusTaxiDatabase db = CampusTaxiDatabase.getInstance(
                     InstrumentationRegistry.getInstrumentation().getTargetContext()
             );
             // This direct call on the main thread MUST throw IllegalStateException

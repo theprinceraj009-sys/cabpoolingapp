@@ -102,8 +102,8 @@ public class RideFeedFragment extends Fragment {
         String uid = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
 
-        // Phase 3: Observe LiveData from repository (Room -> Firestore)
-        rideRepo.getRideFeed("CU_CHANDIGARH", uid, 50).observe(getViewLifecycleOwner(), result -> {
+        // Phase 3/4: Use centralized dynamic config
+        rideRepo.getRideFeed(com.princeraj.campustaxipooling.util.AppConfig.getCampusId(), uid, 50).observe(getViewLifecycleOwner(), result -> {
             if (result.isLoading() && allRides.isEmpty()) {
                 if (shimmerViewContainer != null) {
                     shimmerViewContainer.startShimmer();

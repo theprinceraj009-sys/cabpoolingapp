@@ -107,13 +107,13 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
             // Phase 7: Proper semantic coloring for badges
             if ("COMPLETED".equals(status)) {
                 statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        itemView.getContext().getColor(R.color.status_success)));
+                        androidx.core.content.ContextCompat.getColor(itemView.getContext(), R.color.status_success)));
             } else if ("CANCELLED".equals(status)) {
                 statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        itemView.getContext().getColor(R.color.status_error)));
+                        androidx.core.content.ContextCompat.getColor(itemView.getContext(), R.color.status_error)));
             } else {
                 statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        itemView.getContext().getColor(R.color.brand_secondary)));
+                        androidx.core.content.ContextCompat.getColor(itemView.getContext(), R.color.brand_secondary)));
             }
 
             // Route

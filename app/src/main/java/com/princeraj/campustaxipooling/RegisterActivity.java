@@ -12,6 +12,7 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
+import com.princeraj.campustaxipooling.util.AppConfig;
 
 /**
  * Registration screen. Collects name, roll number, department, campus email, and password.
@@ -106,8 +107,8 @@ public class RegisterActivity extends BaseActivity {
 
         setLoading(true);
 
-        // Fix campusId to "CU_CHANDIGARH"
-        userRepo.registerUser(email, password, name, roll, dept, "CU_CHANDIGARH").observe(this, result -> {
+        // Use AppConfig for dynamic campusId
+        userRepo.registerUser(email, password, name, roll, dept, AppConfig.getCampusId()).observe(this, result -> {
             if (result.isLoading()) return;
 
             setLoading(false);

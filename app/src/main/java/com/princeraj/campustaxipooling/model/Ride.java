@@ -2,6 +2,7 @@ package com.princeraj.campustaxipooling.model;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.PropertyName;
 
 /**
  * Represents a posted ride.
@@ -24,6 +25,7 @@ public class Ride {
     private String preferences;
     private String proofUrl;
     private String status;     // "ACTIVE" | "FULL" | "STARTED" | "COMPLETED" | "CANCELLED"
+    @PropertyName("isDeleted")
     private boolean isDeleted;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -63,6 +65,7 @@ public class Ride {
     public String getPreferences() { return preferences; }
     public String getProofUrl() { return proofUrl; }
     public String getStatus() { return status; }
+    @PropertyName("isDeleted")
     public boolean isDeleted() { return isDeleted; }
     public Timestamp getCreatedAt() { return createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }
@@ -83,6 +86,7 @@ public class Ride {
     public void setPreferences(String preferences) { this.preferences = preferences; }
     public void setProofUrl(String proofUrl) { this.proofUrl = proofUrl; }
     public void setStatus(String status) { this.status = status; }
+    @PropertyName("isDeleted")
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }

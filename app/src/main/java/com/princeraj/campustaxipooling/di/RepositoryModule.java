@@ -37,19 +37,17 @@ public abstract class RepositoryModule {
     // We can also use @Provides for implementations that have complex constructor logic
     // but RideRepositoryImpl now uses @Inject constructor, so @Binds is better.
 
-    @Provides
+    @Binds
     @Singleton
-    public static IUserRepository provideUserRepository(
-            FirebaseAuth auth,
-            FirebaseFirestore db,
-            FirebaseStorage storage) {
-        return new UserRepositoryImpl(auth, db, storage);
-    }
+    public abstract IUserRepository bindUserRepository(UserRepositoryImpl impl);
 
     @Provides
     @Singleton
-    public static IChatRepository provideChatRepository(FirebaseFirestore db, CampusTaxiDatabase database) {
-        return new ChatRepositoryImpl(db, database);
+    public static IChatRepository provideChatRepository(
+            FirebaseFirestore db, 
+            CampusTaxiDatabase database, 
+            com.princeraj.campustaxipooling.util.AppExecutors executors) {
+        return new ChatRepositoryImpl(db, database, executors);
     }
 
     @Provides

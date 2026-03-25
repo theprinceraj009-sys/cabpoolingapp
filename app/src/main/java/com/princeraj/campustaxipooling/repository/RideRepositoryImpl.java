@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Singleton;
+import com.princeraj.campustaxipooling.util.AppConfig;
+import com.princeraj.campustaxipooling.util.FirestoreLogger;
 
 /**
  * Refactored RideRepository with SafeResult wrapper.
@@ -53,15 +55,18 @@ public class RideRepositoryImpl implements IRideRepository {
     private final FirebaseFirestore db;
     private final com.princeraj.campustaxipooling.db.CampusTaxiDatabase database;
     private final com.princeraj.campustaxipooling.sync.SyncManager syncManager;
+    private final com.princeraj.campustaxipooling.util.AppExecutors executors;
     private final java.util.List<com.google.firebase.firestore.ListenerRegistration> activeListeners = new java.util.ArrayList<>();
 
     @javax.inject.Inject
     public RideRepositoryImpl(FirebaseFirestore db, 
                             com.princeraj.campustaxipooling.db.CampusTaxiDatabase database, 
-                            com.princeraj.campustaxipooling.sync.SyncManager syncManager) {
+                            com.princeraj.campustaxipooling.sync.SyncManager syncManager,
+                            com.princeraj.campustaxipooling.util.AppExecutors executors) {
         this.db = db;
         this.database = database;
         this.syncManager = syncManager;
+        this.executors = executors;
     }
 
     // ── Ride CRUD ─────────────────────────────────────────────────────────────
@@ -92,24 +97,25 @@ public class RideRepositoryImpl implements IRideRepository {
         entity.setCreatedAt(System.currentTimeMillis());
         entity.setSyncedAt(null);
 
-        new Thread(() -> {
+        executors.diskIO().execute(() -> {
             database.rideDao().insertRide(entity);
             
-            // 2. Initiate Firestore upload
+            // 2. Initiate Firestore upload (Firebase handles its own network threads)
             db.collection(RIDES_COLLECTION)
                     .document(rideId)
                     .set(ride)
                     .addOnSuccessListener(aVoid -> {
                         Log.d(TAG, "Ride synced to Firestore: " + rideId);
+                        FirestoreLogger.getInstance().logAction(ride.getPostedByUid(), "RIDE_CREATED", "Ride posted to " + ride.getDestination());
                         entity.setSyncedAt(System.currentTimeMillis());
-                        new Thread(() -> database.rideDao().updateRide(entity)).start();
+                        executors.diskIO().execute(() -> database.rideDao().updateRide(entity));
                         liveData.postValue(SafeResult.success(rideId));
                     })
                     .addOnFailureListener(e -> {
                         Log.w(TAG, "Failed to sync ride to Firestore (will retry background sync)", e);
                         liveData.postValue(SafeResult.success(rideId));
                     });
-        }).start();
+        });
 
         return liveData;
     }
@@ -120,13 +126,13 @@ public class RideRepositoryImpl implements IRideRepository {
 
         // ── Phase 5: Query Optimization (Cache-First) ──
         // Immediately fetch from local Room DB to minimize perceived latency
-        new Thread(() -> {
+        executors.diskIO().execute(() -> {
             List<com.princeraj.campustaxipooling.db.entity.RideEntity> cachedEntities = 
                     database.rideDao().getRideFeed(campusId, limit);
             if (!cachedEntities.isEmpty()) {
                 liveData.postValue(SafeResult.success(mapEntitiesToRides(cachedEntities)));
             }
-        }).start();
+        });
 
         // Preferred query: with composite index (campusId + isDeleted + status + journeyDateTime DESC).
         // If the index hasn't been created yet in Firebase Console, this will fail with
@@ -204,11 +210,11 @@ public class RideRepositoryImpl implements IRideRepository {
                         }
                         liveData.postValue(SafeResult.success(filtered));
 
-                        new Thread(() -> {
+                        executors.diskIO().execute(() -> {
                             for (Ride ride : filtered) {
                                 database.rideDao().insertRide(mapRideToEntity(ride, true));
                             }
-                        }).start();
+                        });
                     }
                 });
 
@@ -226,12 +232,12 @@ public class RideRepositoryImpl implements IRideRepository {
                     if (error != null) {
                         Log.e(TAG, "Error fetching my rides", error);
                         // ── Phase 3: Offline Fallback ──
-                        new Thread(() -> {
+                        executors.diskIO().execute(() -> {
                             List<com.princeraj.campustaxipooling.db.entity.RideEntity> entities = 
                                     database.rideDao().getUserRides(uid);
                             List<Ride> rides = mapEntitiesToRides(entities);
                             liveData.postValue(SafeResult.errorWithCache(error, rides, "Network error. Showing local rides."));
-                        }).start();
+                        });
                         return;
                     }
 

@@ -13,7 +13,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.Timestamp;
 import com.princeraj.campustaxipooling.model.Ride;
 import com.princeraj.campustaxipooling.model.User;
-import com.princeraj.campustaxipooling.ui.dialog.VerificationDialogFragment;
+import com.princeraj.campustaxipooling.ui.dialog.MessageDialogFragment;
 
 import java.util.Calendar;
 import javax.inject.Inject;
@@ -79,6 +79,7 @@ public class PostRideActivity extends BaseActivity {
 
     private void setupDateTimePickers() {
         dateEt.setOnClickListener(v -> {
+            if (isFinishing() || isDestroyed()) return;
             Calendar now = Calendar.getInstance();
             new DatePickerDialog(this,
                     (view, year, month, day) -> {
@@ -95,6 +96,7 @@ public class PostRideActivity extends BaseActivity {
         });
 
         timeEt.setOnClickListener(v -> {
+            if (isFinishing() || isDestroyed()) return;
             Calendar now = Calendar.getInstance();
             new TimePickerDialog(this,
                     (view, hour, minute) -> {
@@ -113,7 +115,6 @@ public class PostRideActivity extends BaseActivity {
     }
 
     private void attemptPostRide() {
-        // Validation logic
         String source = getText(sourceEt);
         String destination = getText(destinationEt);
         String fareStr = getText(fareEt);
@@ -140,9 +141,9 @@ public class PostRideActivity extends BaseActivity {
 
         setLoading(true);
 
-        // Phase 3/7: Modern Hilt+Repository pattern
         userRepo.getUserProfile(currentUid)
                 .observe(this, result -> {
+                    if (isFinishing() || isDestroyed()) return;
                     if (result.isLoading()) return;
 
                     if (result.isError()) {
@@ -152,17 +153,14 @@ public class PostRideActivity extends BaseActivity {
                     }
 
                     User user = result.getData();
-                    if (!isFinishing() && user != null && !user.isVerifiedDriver() && !user.isAdmin()) {
-                        setLoading(false);
-                        showVerificationDialog();
-                        return;
-                    }
-
+                    // RULE RELAXED: Anyone verified on the campus can now post a ride.
+                    // TODO: Re-introduce driver verification in Phase 8 as a non-blocking feature.
+                    
                     String name = user != null ? user.getName() : "Anonymous";
                     Ride ride = new Ride(
                             currentUid,
                             name,
-                            "CU_CHANDIGARH",
+                            com.princeraj.campustaxipooling.util.AppConfig.getCampusId(),
                             source,
                             destination,
                             new Timestamp(selectedDateTime.getTime()),
@@ -177,38 +175,19 @@ public class PostRideActivity extends BaseActivity {
                         
                         setLoading(false);
                         if (rideResult.isSuccess()) {
-                            Snackbar.make(postRideBtn, "Ride posted successfully! 🚕", Snackbar.LENGTH_SHORT).show();
-                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1500);
+                            MessageDialogFragment.newInstance("Success", "Ride posted successfully! 🚕", this::finish)
+                                    .show(getSupportFragmentManager(), "post_success");
                         } else {
-                            Snackbar.make(postRideBtn, "Error: " + rideResult.getMessage(), Snackbar.LENGTH_LONG).show();
+                            MessageDialogFragment.newInstance("Error", "Failed to post: " + rideResult.getMessage(), null)
+                                    .show(getSupportFragmentManager(), "post_error");
                         }
                     });
                 });
     }
 
     private void setLoading(boolean loading) {
-        if (isFinishing()) return;
         postRideBtn.setEnabled(!loading);
         postRideBtn.setText(loading ? "Posting…" : "Post Ride 🚕");
-    }
-
-    private void showVerificationDialog() {
-        if (getSupportFragmentManager().findFragmentByTag("verify_dialog") != null) return;
-        
-        VerificationDialogFragment dialog = new VerificationDialogFragment();
-        dialog.setListener(new VerificationDialogFragment.VerificationListener() {
-            @Override
-            public void onGoToSettings() {
-                // startActivity(new Intent(PostRideActivity.this, EditProfileActivity.class));
-                finish();
-            }
-
-            @Override
-            public void onCancel() {
-                // Keep the screen open
-            }
-        });
-        dialog.show(getSupportFragmentManager(), "verify_dialog");
     }
 
     private String getText(TextInputEditText field) {

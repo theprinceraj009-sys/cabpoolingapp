@@ -19,11 +19,12 @@ import com.princeraj.campustaxipooling.db.entity.UserEntity;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
+import java.io.IOException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import com.princeraj.campustaxipooling.util.AppExecutors;
 
 /**
  * SyncManager: Synchronizes offline writes with Firestore.
@@ -48,15 +49,16 @@ public class SyncManager {
     private final CampusTaxiDatabase database;
     private final ConflictResolver conflictResolver;
     private final Context context;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final AppExecutors executors;
 
     @Inject
     public SyncManager(@ApplicationContext Context context, FirebaseFirestore db, CampusTaxiDatabase database, 
-                       ConflictResolver conflictResolver) {
+                       ConflictResolver conflictResolver, AppExecutors executors) {
         this.context = context;
         this.db = db;
         this.database = database;
         this.conflictResolver = conflictResolver;
+        this.executors = executors;
     }
 
     public Context getContext() {
@@ -70,7 +72,7 @@ public class SyncManager {
      * Called when network becomes available.
      */
     public Task<Void> syncOfflineRides() {
-        return Tasks.call(executor, () -> {
+        return Tasks.call(executors.diskIO(), () -> {
             Log.d(TAG, "Starting ride sync...");
 
             // Step 1: Get unsynced rides from Room
@@ -97,7 +99,7 @@ public class SyncManager {
      * Syncs all unsynced messages to Firestore.
      */
     public Task<Void> syncOfflineMessages() {
-        return Tasks.call(executor, () -> {
+        return Tasks.call(executors.diskIO(), () -> {
             Log.d(TAG, "Starting message sync...");
 
             List<MessageEntity> unsyncedMessages = database.messageDao().getUnsyncedMessages();
@@ -122,7 +124,7 @@ public class SyncManager {
      * Syncs all unsynced user profile updates.
      */
     public Task<Void> syncOfflineUsers() {
-        return Tasks.call(executor, () -> {
+        return Tasks.call(executors.diskIO(), () -> {
             Log.d(TAG, "Starting user sync...");
 
             List<UserEntity> unsyncedUsers = database.userDao().getUnsyncedUsers();
@@ -193,7 +195,7 @@ public class SyncManager {
                 })
                 .addOnSuccessListener(aVoid -> {
                     ride.setSyncedAt(System.currentTimeMillis());
-                    executor.execute(() -> database.rideDao().updateRide(ride));
+                    executors.diskIO().execute(() -> database.rideDao().updateRide(ride));
                     Log.d(TAG, "Ride synced: " + ride.getRideId());
                 });
     }
@@ -210,7 +212,7 @@ public class SyncManager {
                 .set(messageEntityToMap(message))
                 .addOnSuccessListener(aVoid -> {
                     message.setSyncedAt(System.currentTimeMillis());
-                    executor.execute(() -> database.messageDao().updateMessage(message));
+                    executors.diskIO().execute(() -> database.messageDao().updateMessage(message));
                 });
     }
 
@@ -224,7 +226,7 @@ public class SyncManager {
                 .set(userEntityToMap(user))
                 .addOnSuccessListener(aVoid -> {
                     user.setSyncedAt(System.currentTimeMillis());
-                    executor.execute(() -> database.userDao().updateUser(user));
+                    executors.diskIO().execute(() -> database.userDao().updateUser(user));
                 });
     }
 
@@ -292,7 +294,7 @@ public class SyncManager {
     }
 
     public void clearOfflineData() {
-        executor.execute(() -> {
+        executors.diskIO().execute(() -> {
             database.rideDao().clearAllRides();
             database.messageDao().clearAllMessages();
             database.userDao().clearAllUsers();

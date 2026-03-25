@@ -42,7 +42,7 @@ public class RideFeedViewModel extends ViewModel {
     private final MutableLiveData<Integer> pageSize = new MutableLiveData<>(20);
 
     // Private state
-    private String currentCampusId = "CU_CHANDIGARH";
+    private String currentCampusId = com.princeraj.campustaxipooling.util.AppConfig.getCampusId();
     private String currentUserUid;
     private boolean isLoadingMore = false;
 

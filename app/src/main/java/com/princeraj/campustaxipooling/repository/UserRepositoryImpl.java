@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import com.princeraj.campustaxipooling.util.AppConfig;
+import com.princeraj.campustaxipooling.util.FirestoreLogger;
 
 /**
  * Refactored UserRepository with SafeResult wrapper.
@@ -29,17 +31,18 @@ public class UserRepositoryImpl implements IUserRepository {
 
     private static final String TAG = "UserRepository";
     private static final String USERS_COLLECTION = "users";
-    private static final String ALLOWED_EMAIL_DOMAIN = "@cuchd.in";
 
     private final FirebaseAuth auth;
     private final FirebaseFirestore db;
     private final FirebaseStorage storage;
+    private final com.princeraj.campustaxipooling.util.AppExecutors executors;
 
     @Inject
-    public UserRepositoryImpl(FirebaseAuth auth, FirebaseFirestore db, FirebaseStorage storage) {
+    public UserRepositoryImpl(FirebaseAuth auth, FirebaseFirestore db, FirebaseStorage storage, com.princeraj.campustaxipooling.util.AppExecutors executors) {
         this.auth = auth;
         this.db = db;
         this.storage = storage;
+        this.executors = executors;
     }
 
     // ── Authentication ────────────────────────────────────────────────────────
@@ -58,7 +61,7 @@ public class UserRepositoryImpl implements IUserRepository {
 
     @Override
     public boolean isValidCampusEmail(String email) {
-        return email != null && email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN);
+        return email != null && email.toLowerCase().endsWith(AppConfig.getCampusDomain());
     }
 
     @Override
@@ -103,6 +106,7 @@ public class UserRepositoryImpl implements IUserRepository {
                                 .set(user)
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "User profile created: " + fbUser.getUid());
+                                    FirestoreLogger.getInstance().logAction(fbUser.getUid(), "REGISTRATION", "User profile created");
                                     liveData.setValue(SafeResult.success(authResult));
                                 })
                                 .addOnFailureListener(e -> {

@@ -55,8 +55,8 @@ public class DatabaseModule {
             @ApplicationContext Context context,
             com.google.firebase.firestore.FirebaseFirestore db,
             CampusTaxiDatabase database,
-            ConflictResolver conflictResolver) {
-        return new SyncManager(context, db, database, conflictResolver);
+            ConflictResolver conflictResolver,
+            com.princeraj.campustaxipooling.util.AppExecutors executors) {
+        return new SyncManager(context, db, database, conflictResolver, executors);
     }
 }
-

@@ -16,7 +16,11 @@ public class RideModelTest {
 
     @Test
     public void testRideWithSeats_hasSeatsAvailable() {
-        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", Timestamp.now(), 100, 4);
+        // Use a future date so isActive() time validation passes
+        long futureTime = System.currentTimeMillis() + 3600000; // 1 hour later
+        Timestamp futureTimestamp = new Timestamp(new java.util.Date(futureTime));
+        
+        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", futureTimestamp, 100, 4);
         ride.setSeatsRemaining(4);
         ride.setStatus("ACTIVE");
         
@@ -26,7 +30,9 @@ public class RideModelTest {
 
     @Test
     public void testRideWithNoSeats_notAvailable() {
-        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", Timestamp.now(), 100, 4);
+        long futureTime = System.currentTimeMillis() + 3600000;
+        Timestamp futureTimestamp = new Timestamp(new java.util.Date(futureTime));
+        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", futureTimestamp, 100, 4);
         ride.setSeatsRemaining(0);
         ride.setStatus("FULL");
         
@@ -35,7 +41,9 @@ public class RideModelTest {
 
     @Test
     public void testCancelledRide_notActive() {
-        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", Timestamp.now(), 100, 4);
+        long futureTime = System.currentTimeMillis() + 3600000;
+        Timestamp futureTimestamp = new Timestamp(new java.util.Date(futureTime));
+        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", futureTimestamp, 100, 4);
         ride.setStatus("CANCELLED");
         ride.setDeleted(true);
         
@@ -44,7 +52,9 @@ public class RideModelTest {
 
     @Test
     public void testFareCalculation() {
-        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", Timestamp.now(), 400, 4);
+        long futureTime = System.currentTimeMillis() + 3600000;
+        Timestamp futureTimestamp = new Timestamp(new java.util.Date(futureTime));
+        Ride ride = new Ride("uid", "Name", "CU", "Source", "Dest", futureTimestamp, 400, 4);
         assertTrue("Fare per person should be 100", ride.getPerPersonFare() == 100f);
     }
 }

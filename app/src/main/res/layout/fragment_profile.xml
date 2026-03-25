@@ -268,6 +268,20 @@
             android:paddingTop="14dp">
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/adminConsoleBtn"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="ADMIN CONSOLE"
+                android:textSize="14sp"
+                android:visibility="gone"
+                android:backgroundTint="@color/bg_card"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:strokeColor="@color/brand_accent"
+                app:icon="@android:drawable/ic_lock_lock"
+                app:iconTint="@color/brand_accent"/>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/editProfileBtn"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"

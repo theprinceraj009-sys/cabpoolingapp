@@ -16,6 +16,7 @@ import com.princeraj.campustaxipooling.model.Ride;
 import com.princeraj.campustaxipooling.repository.RideRepositoryImpl;
 import com.princeraj.campustaxipooling.sync.SyncManager;
 import com.princeraj.campustaxipooling.util.SafeResult;
+import com.princeraj.campustaxipooling.util.AppExecutors;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -43,6 +44,8 @@ public class RideRepositoryTest {
     DocumentReference documentReference;
     @Mock
     Observer<SafeResult<String>> resultObserver;
+    @Mock
+    AppExecutors appExecutors;
 
     private RideRepositoryImpl repository;
 
@@ -53,7 +56,7 @@ public class RideRepositoryTest {
         when(collectionReference.document()).thenReturn(documentReference);
         when(documentReference.getId()).thenReturn("test_id");
 
-        repository = new RideRepositoryImpl(db, database, syncManager);
+        repository = new RideRepositoryImpl(db, database, syncManager, appExecutors);
     }
 
     @Test

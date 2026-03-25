@@ -45,7 +45,8 @@ public class LoginUiTest {
         onView(withId(R.id.loginBtn)).perform(click());
 
         // 3. Expected error for domain restriction
-        onView(hasDescendant(withText(activityRule.getActivity().getString(R.string.email_domain_error))))
+        String errorMsg = InstrumentationRegistry.getInstrumentation().getTargetContext().getString(R.string.email_domain_error);
+        onView(hasDescendant(withText(errorMsg)))
                 .check(matches(isDisplayed()));
     }
 

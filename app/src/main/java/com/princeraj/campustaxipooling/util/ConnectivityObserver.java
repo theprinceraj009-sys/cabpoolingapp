@@ -91,9 +91,15 @@ public class ConnectivityObserver {
      * Helper to check current network status.
      */
     public boolean isConnected() {
-        Network activeNetwork = connectivityManager.getActiveNetwork();
-        if (activeNetwork == null) return false;
-        NetworkCapabilities caps = connectivityManager.getNetworkCapabilities(activeNetwork);
-        return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) return false;
+            NetworkCapabilities caps = connectivityManager.getNetworkCapabilities(activeNetwork);
+            return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        } else {
+            @SuppressWarnings("deprecation")
+            android.net.NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+            return networkInfo != null && networkInfo.isConnected();
+        }
     }
 }

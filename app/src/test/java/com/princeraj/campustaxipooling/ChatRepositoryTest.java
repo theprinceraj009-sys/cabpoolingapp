@@ -22,9 +22,9 @@ public class ChatRepositoryTest {
 
     @Before
     public void setup() {
-        // 2-arg constructor: (FirebaseFirestore db, CampusTaxiDatabase database)
+        // 3-arg constructor: (FirebaseFirestore db, CampusTaxiDatabase database, AppExecutors executors)
         // Passing null is safe — only moderateMessage() is tested here (pure logic, no I/O).
-        chatRepo = new ChatRepositoryImpl(null, null);
+        chatRepo = new ChatRepositoryImpl(null, null, null);
     }
 
     @Test

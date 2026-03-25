@@ -34,7 +34,7 @@ public class ProfileFragment extends Fragment {
     private TextView avatarInitial, profileName, profileEmail;
     private TextView ridesPostedCount, ridesJoinedCount, tierBadge, tierLabel;
     private TextView rollNumberText, departmentText;
-    private MaterialButton editProfileBtn, settingsBtn, logoutBtn;
+    private MaterialButton editProfileBtn, settingsBtn, adminConsoleBtn, logoutBtn;
     private com.google.android.material.imageview.ShapeableImageView profileImageView;
 
     @Inject
@@ -67,6 +67,7 @@ public class ProfileFragment extends Fragment {
         departmentText = view.findViewById(R.id.departmentText);
         editProfileBtn = view.findViewById(R.id.editProfileBtn);
         settingsBtn = view.findViewById(R.id.settingsBtn);
+        adminConsoleBtn = view.findViewById(R.id.adminConsoleBtn);
         logoutBtn = view.findViewById(R.id.logoutBtn);
 
         editProfileBtn.setOnClickListener(v ->
@@ -74,6 +75,9 @@ public class ProfileFragment extends Fragment {
 
         settingsBtn.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), SettingsActivity.class)));
+
+        adminConsoleBtn.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), com.princeraj.campustaxipooling.admin.AdminDashboardActivity.class)));
 
         logoutBtn.setOnClickListener(v -> {
             userRepo.logout();
@@ -150,6 +154,9 @@ public class ProfileFragment extends Fragment {
             tierBadge.setText("⭐");
             tierLabel.setText("FREE");
         }
+
+        // ERP: Administrative Access Control
+        adminConsoleBtn.setVisibility(user.isAdmin() ? View.VISIBLE : View.GONE);
     }
 
     private void loadStats(String uid) {

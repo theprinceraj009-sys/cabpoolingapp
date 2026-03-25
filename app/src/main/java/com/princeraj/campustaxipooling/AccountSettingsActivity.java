@@ -8,7 +8,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.princeraj.campustaxipooling.ui.dialog.MessageDialogFragment;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.EmailAuthProvider;
@@ -35,6 +35,7 @@ public class AccountSettingsActivity extends BaseActivity {
 
     private final UserRepository userRepo = UserRepository.getInstance();
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private final FirebaseAuth auth = FirebaseAuth.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,18 +101,17 @@ public class AccountSettingsActivity extends BaseActivity {
         // we'll use the Password Reset Email flow mostly, 
         // but for "Enterprise" we can let them change it directly via re-auth.
         
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Change Password")
-                .setMessage("We can send a secure password reset link to your email to update your password safely.")
-                .setPositiveButton("Send Link", (dialog, which) -> {
-                    FirebaseUser user = userRepo.getCurrentFirebaseUser();
+        MessageDialogFragment.newInstance(
+                "Change Password",
+                "We can send a secure password reset link to your email to update your password safely.",
+                () -> {
+                    FirebaseUser user = auth.getCurrentUser();
                     if (user != null && user.getEmail() != null) {
-                        userRepo.sendPasswordReset(user.getEmail())
+                        FirebaseAuth.getInstance().sendPasswordResetEmail(user.getEmail())
                                 .addOnSuccessListener(v -> Snackbar.make(btnUpdatePassword, "Reset link sent!", Snackbar.LENGTH_LONG).show());
                     }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                }
+        ).show(getSupportFragmentManager(), "password_reset");
     }
 
     private void showEmailUpdateDialog() {
@@ -121,15 +121,11 @@ public class AccountSettingsActivity extends BaseActivity {
     }
 
     private void showDeleteAccountDialog() {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Delete Account?")
-                .setMessage("This action is permanent and cannot be undone. All your ride history and data will be removed.")
-                .setPositiveButton("Delete Forever", (dialog, which) -> {
-                    // In a real app, you would prompt for password again
-                    deleteAccountInternal();
-                })
-                .setNegativeButton("Keep My Account", null)
-                .show();
+        MessageDialogFragment.newInstance(
+                "Delete Account?",
+                "This action is permanent and cannot be undone. All your ride history and data will be removed.",
+                this::deleteAccountInternal
+        ).show(getSupportFragmentManager(), "delete_account");
     }
 
     private void deleteAccountInternal() {

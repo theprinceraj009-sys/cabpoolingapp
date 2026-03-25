@@ -21,6 +21,9 @@ import android.graphics.BitmapFactory;
 import com.bumptech.glide.Glide;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.princeraj.campustaxipooling.ui.dialog.MessageDialogFragment;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -42,6 +45,7 @@ public class EditProfileActivity extends BaseActivity {
     private MaterialSwitch switchPrivacyPhone;
     private ShapeableImageView profileImageView;
     private MaterialButton saveBtn;
+    private final ExecutorService diskExecutor = Executors.newSingleThreadExecutor();
 
     private Uri selectedImageUri = null;
     private final ActivityResultLauncher<CropImageContractOptions> cropImage =
@@ -144,19 +148,28 @@ public class EditProfileActivity extends BaseActivity {
         updates.put("isPhoneVisibleToMatches", switchPrivacyPhone.isChecked());
 
         if (selectedImageUri != null) {
-            byte[] compressedBytes = compressImageForFreeTier(selectedImageUri);
-            if (compressedBytes != null) {
-                userRepo.uploadProfilePicture(user.getUid(), compressedBytes).observe(this, uploadRes -> {
-                    if (uploadRes.isSuccess()) {
-                       updates.put("profilePhotoUrl", uploadRes.getData());
-                       completeProfileUpdate(updates, user.getUid());
-                    } else if (uploadRes.isError()) {
+            diskExecutor.execute(() -> {
+                byte[] compressedBytes = compressImageForFreeTier(selectedImageUri);
+                runOnUiThread(() -> {
+                    if (compressedBytes != null) {
+                        userRepo.uploadProfilePicture(user.getUid(), compressedBytes).observe(this, uploadRes -> {
+                            if (uploadRes.isSuccess()) {
+                                updates.put("profilePhotoUrl", uploadRes.getData());
+                                completeProfileUpdate(updates, user.getUid());
+                            } else if (uploadRes.isError()) {
+                                setLoading(false);
+                                MessageDialogFragment.newInstance("Upload Failed", uploadRes.getMessage(), null)
+                                        .show(getSupportFragmentManager(), "profile_error");
+                            }
+                        });
+                    } else {
                         setLoading(false);
-                        Snackbar.make(saveBtn, "Image upload failed: " + uploadRes.getMessage(), Snackbar.LENGTH_LONG).show();
+                        MessageDialogFragment.newInstance("Error", "Could not process image.", null)
+                                .show(getSupportFragmentManager(), "profile_error");
                     }
                 });
-                return;
-            }
+            });
+            return;
         }
         
         completeProfileUpdate(updates, user.getUid());
@@ -167,10 +180,12 @@ public class EditProfileActivity extends BaseActivity {
             if (result.isLoading()) return;
             setLoading(false);
             if (result.isSuccess()) {
-                Snackbar.make(saveBtn, "Profile updated!", Snackbar.LENGTH_SHORT).show();
-                saveBtn.postDelayed(this::finish, 1000);
+                MessageDialogFragment.newInstance("Success", "Profile updated!", this::finish)
+                        .show(getSupportFragmentManager(), "profile_success");
             } else {
-                Snackbar.make(saveBtn, "Failed to update: " + result.getMessage(), Snackbar.LENGTH_LONG).show();
+                setLoading(false);
+                MessageDialogFragment.newInstance("Error", "Failed to update: " + result.getMessage(), null)
+                        .show(getSupportFragmentManager(), "profile_error");
             }
         });
     }

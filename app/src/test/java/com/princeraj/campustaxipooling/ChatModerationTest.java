@@ -20,8 +20,8 @@ public class ChatModerationTest {
 
     @Before
     public void setUp() {
-        // moderateMessage() is pure logic — Firebase and DB are never used here.
-        chatRepo = new ChatRepositoryImpl(null, null);
+        // moderateMessage() is pure logic — Firebase, DB, and Executors are never used here.
+        chatRepo = new ChatRepositoryImpl(null, null, null);
     }
 
     @Test

@@ -89,9 +89,15 @@ public class AdminDashboardActivity extends BaseActivity {
         adminRepo.getSystemStats().observe(this, result -> {
             if (result.isSuccess() && result.getData() != null) {
                 Map<String, Long> stats = result.getData();
-                totalUsersCount.setText(String.valueOf(stats.getOrDefault("totalUsers", 0L)));
-                activeRidesCount.setText(String.valueOf(stats.getOrDefault("activeRides", 0L)));
-                pendingReportsCount.setText(String.valueOf(stats.getOrDefault("pendingReports", 0L)));
+                
+                Long totalUsers = stats.get("totalUsers");
+                totalUsersCount.setText(String.valueOf(totalUsers != null ? totalUsers : 0L));
+                
+                Long activeRides = stats.get("activeRides");
+                activeRidesCount.setText(String.valueOf(activeRides != null ? activeRides : 0L));
+                
+                Long pendingReports = stats.get("pendingReports");
+                pendingReportsCount.setText(String.valueOf(pendingReports != null ? pendingReports : 0L));
             }
         });
     }

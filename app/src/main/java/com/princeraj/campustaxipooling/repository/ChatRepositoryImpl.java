@@ -12,6 +12,8 @@ import com.google.firebase.firestore.Query;
 import com.princeraj.campustaxipooling.model.Message;
 import com.princeraj.campustaxipooling.util.NotificationApi;
 import com.princeraj.campustaxipooling.util.SafeResult;
+import com.princeraj.campustaxipooling.util.AppExecutors;
+import com.princeraj.campustaxipooling.util.FirestoreLogger;
 
 import dagger.hilt.android.scopes.ActivityScoped;
 import java.util.ArrayList;
@@ -44,12 +46,14 @@ public class ChatRepositoryImpl implements IChatRepository {
 
     private final FirebaseFirestore db;
     private final com.princeraj.campustaxipooling.db.CampusTaxiDatabase database;
+    private final AppExecutors executors;
     private final List<ListenerRegistration> activeListeners = new ArrayList<>();
 
     @Inject
-    public ChatRepositoryImpl(FirebaseFirestore db, com.princeraj.campustaxipooling.db.CampusTaxiDatabase database) {
+    public ChatRepositoryImpl(FirebaseFirestore db, com.princeraj.campustaxipooling.db.CampusTaxiDatabase database, AppExecutors executors) {
         this.db = db;
         this.database = database;
+        this.executors = executors;
     }
 
     @Override

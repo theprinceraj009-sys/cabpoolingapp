@@ -29,8 +29,16 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.toVersion("22")
+        targetCompatibility = JavaVersion.toVersion("22")
+    }
+
+    // Enterprise Force: Use JDK 22 toolchain to match user's local environment
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(22))
+        }
     }
 
 
@@ -40,6 +48,7 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     // Firebase BoM — manages all Firebase versions together
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-auth")

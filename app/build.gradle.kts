@@ -30,8 +30,8 @@ android {
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.toVersion("22")
-        targetCompatibility = JavaVersion.toVersion("22")
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     // Enterprise Force: Use JDK 22 toolchain to match user's local environment

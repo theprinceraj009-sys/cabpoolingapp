@@ -26,7 +26,9 @@ service cloud.firestore {
 
     // ─── 1. Users Collection ────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      // Security Audit: Changed 'read' to 'get' to prevent collection-wide scraping/listing.
+      // Authenticated users can view specific profiles, but cannot list all users.
+      allow get: if isAuthenticated();
       // Owner can create their initial profile once
       allow create: if isOwner(userId);
       // Owner can update, but must NOT be banned. Admins can always toggle ban/admin status.

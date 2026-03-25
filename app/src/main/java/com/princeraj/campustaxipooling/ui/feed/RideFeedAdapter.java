@@ -47,6 +47,11 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
     public void onBindViewHolder(@NonNull RideViewHolder holder, int position) {
         Ride ride = rides.get(position);
         holder.bind(ride, listener);
+        
+        // Phase 7: Apply premium entrance animation
+        android.view.animation.Animation animation = android.view.animation.AnimationUtils.loadAnimation(
+                holder.itemView.getContext(), com.princeraj.campustaxipooling.R.anim.slide_up);
+        holder.itemView.startAnimation(animation);
     }
 
     @Override

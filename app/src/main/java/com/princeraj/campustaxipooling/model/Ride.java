@@ -8,7 +8,7 @@ import com.google.firebase.firestore.PropertyName;
  * Represents a posted ride.
  * Stored in Firestore: rides/{rideId}
  */
-public class Ride {
+public class Ride implements java.io.Serializable {
 
     @DocumentId
     private String rideId;
@@ -30,8 +30,10 @@ public class Ride {
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    // Required empty constructor for Firestore deserialization
-    public Ride() {}
+    // Required default constructor for Firestore deserialization
+    public Ride() {
+        super();
+    }
 
     public Ride(String postedByUid, String postedByName, String campusId,
                 String source, String destination, Timestamp journeyDateTime,

@@ -11,6 +11,16 @@ app.use(express.json());
 // Basic health check
 app.get("/", (req, res) => res.send("Campus Taxi Pooling Notification API is running."));
 
+// Security Audit: Middleware to verify the shared secret from the Android app
+const API_SECRET = process.env.NOTIFICATION_API_KEY || "CAMPUS_TAXI_ADMIN_NOTIFICATION_KEY_2026";
+app.use((req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+  if (req.path !== "/" && apiKey !== API_SECRET) {
+    return res.status(401).send("Unauthorized: Invalid API Key");
+  }
+  next();
+});
+
 /**
  * 1: Notify ride poster when a seat request is created.
  * Body requires: { rideId, requesterName, posterUid, status: "PENDING" }

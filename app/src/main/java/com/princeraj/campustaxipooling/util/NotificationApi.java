@@ -107,9 +107,13 @@ public class NotificationApi {
     // ── Internal ─────────────────────────────────────────────────────────────
 
     private static void post(String path, JSONObject body) {
+        // Security Audit: Unified API secret for PaaS verification
+        String apiSecret = "CAMPUS_TAXI_ADMIN_NOTIFICATION_KEY_2026";
+        
         RequestBody reqBody = RequestBody.create(body.toString(), JSON_TYPE);
         Request request = new Request.Builder()
                 .url(BASE_URL + path)
+                .header("x-api-key", apiSecret)
                 .post(reqBody)
                 .build();
         try {

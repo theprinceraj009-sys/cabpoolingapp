@@ -1,21 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Ride card item — Uber/Ola Premium Style -->
-<androidx.cardview.widget.CardView
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="6dp"
-    android:layout_marginHorizontal="2dp"
+    android:layout_marginVertical="8dp"
+    android:layout_marginHorizontal="12dp"
     app:cardBackgroundColor="@color/bg_card"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="6dp">
+    app:cardCornerRadius="24dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/bg_divider">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
         <!-- Row 1: Poster avatar + name + status badge -->
         <LinearLayout
@@ -23,19 +25,19 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="14dp">
+            android:layout_marginBottom="16dp">
 
-            <!-- Avatar circle with initial -->
+            <!-- Avatar initial with glow -->
             <TextView
                 android:id="@+id/posterInitial"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:gravity="center"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@color/black"
                 android:background="@drawable/bg_circle_yellow"
-                android:layout_marginEnd="12dp"/>
+                android:layout_marginEnd="14dp"/>
 
             <!-- Name & Department -->
             <LinearLayout
@@ -48,7 +50,7 @@
                     android:id="@+id/posterName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"/>
 
@@ -56,61 +58,57 @@
                     android:id="@+id/posterDept"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"/>
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:alpha="0.8"/>
             </LinearLayout>
 
-            <!-- Status badge -->
+            <!-- Status badge (Pill style) -->
             <TextView
                 android:id="@+id/statusBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ACTIVE"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="@color/ride_active"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:background="@drawable/bg_badge_active"/>
+                android:textColor="@color/brand_secondary"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_badge_active"
+                android:letterSpacing="0.05"/>
         </LinearLayout>
 
-        <!-- Divider -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/bg_divider"
-            android:layout_marginBottom="14dp"/>
-
-        <!-- Route: Source → Destination with indicator dots -->
+        <!-- Route: Source → Destination -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="18dp"
+            android:paddingHorizontal="4dp">
 
-            <!-- Route indicator column -->
+            <!-- Map-Style Route indicator -->
             <LinearLayout
-                android:layout_width="20dp"
+                android:layout_width="22dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:layout_marginEnd="12dp"
-                android:layout_marginTop="3dp">
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="4dp">
 
                 <View
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
                     android:background="@drawable/bg_dot_green"/>
 
                 <View
                     android:layout_width="2dp"
-                    android:layout_height="24dp"
+                    android:layout_height="28dp"
                     android:background="@color/bg_divider"
-                    android:layout_marginVertical="2dp"/>
+                    android:layout_marginVertical="3dp"/>
 
                 <View
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
                     android:background="@drawable/bg_dot_yellow"/>
             </LinearLayout>
 
@@ -125,125 +123,89 @@
                     android:id="@+id/sourceText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="20dp"/>
+                    android:layout_marginBottom="24dp"/>
 
                 <TextView
                     android:id="@+id/destinationText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="@color/brand_secondary"/>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Info chips: Time | Fare | Seats -->
+        <!-- Dynamic Information Panel -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="14dp">
+            android:layout_marginBottom="20dp">
 
-            <!-- Time chip -->
+            <!-- Time Panel -->
             <LinearLayout
+                android:id="@+id/timePanel"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@color/bg_input"
-                android:padding="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🕐"
-                    android:textSize="15sp"/>
-
-                <TextView
-                    android:id="@+id/timeText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="center"
-                    android:layout_marginTop="2dp"/>
+                android:background="@drawable/bg_panel_surface"
+                android:padding="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🕐" android:textSize="16sp"/>
+                <TextView android:id="@+id/timeText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
             </LinearLayout>
 
-            <View android:layout_width="4dp" android:layout_height="0dp"/>
+            <View android:layout_width="8dp" android:layout_height="0dp"/>
 
-            <!-- Fare chip (yellow) -->
+            <!-- Fare Panel (Accent Highlighting) -->
             <LinearLayout
+                android:id="@+id/farePanel"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@color/bg_input"
-                android:padding="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹"
-                    android:textSize="15sp"
-                    android:textColor="@color/brand_secondary"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/fareText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="@color/brand_secondary"
-                    android:textStyle="bold"
-                    android:gravity="center"
-                    android:layout_marginTop="2dp"/>
+                android:background="@drawable/bg_panel_yellow_soft"
+                android:padding="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="₹" android:textSize="16sp" android:textColor="@color/brand_secondary" android:textStyle="bold"/>
+                <TextView android:id="@+id/fareText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/brand_secondary" android:textStyle="bold" android:layout_marginTop="4dp"/>
             </LinearLayout>
 
-            <View android:layout_width="4dp" android:layout_height="0dp"/>
+            <View android:layout_width="8dp" android:layout_height="0dp"/>
 
-            <!-- Seats chip -->
+            <!-- Seats Panel -->
             <LinearLayout
+                android:id="@+id/seatsPanel"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@color/bg_input"
-                android:padding="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="💺"
-                    android:textSize="15sp"/>
-
-                <TextView
-                    android:id="@+id/seatsText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="center"
-                    android:layout_marginTop="2dp"/>
+                android:background="@drawable/bg_panel_surface"
+                android:padding="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💺" android:textSize="16sp"/>
+                <TextView android:id="@+id/seatsText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Yellow CTA Button -->
+        <!-- Ultra-Premium Yellow Action Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/viewRideBtn"
-            style="@style/Widget.CampusTaxi.Button.Yellow"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="View &amp; Request Seat"
-            android:textSize="13sp"
+            android:layout_height="56dp"
+            android:text="Request to Join"
+            android:textSize="14sp"
+            android:letterSpacing="0.02"
             android:textColor="@color/black"
             android:textStyle="bold"
-            app:cornerRadius="10dp"/>
+            app:cornerRadius="18dp"
+            app:backgroundTint="@color/brand_secondary"
+            app:elevation="4dp"
+            app:rippleColor="#40000000"/>
 
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

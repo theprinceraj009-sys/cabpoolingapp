@@ -9,7 +9,7 @@ import com.google.firebase.firestore.Exclude;
  * Represents a registered campus user.
  * Stored in Firestore: users/{uid}
  */
-public class User {
+public class User implements java.io.Serializable {
 
     @DocumentId
     private String uid;

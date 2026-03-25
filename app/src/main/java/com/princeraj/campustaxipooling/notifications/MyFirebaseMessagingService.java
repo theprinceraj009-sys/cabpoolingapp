@@ -8,6 +8,7 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.princeraj.campustaxipooling.repository.UserRepository;
 
+import androidx.annotation.NonNull;
 import java.util.Map;
 
 /**
@@ -37,9 +38,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "FCMService";
 
     @Override
-    public void onNewToken(String token) {
+    public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        Log.d(TAG, "FCM token refreshed: " + token);
+        // Security Audit: Do not log raw FCM tokens in production/release builds
+        Log.d(TAG, "FCM token refreshed");
 
         // Update token in Firestore so Cloud Functions can reach this device
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();

@@ -13,6 +13,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import androidx.test.platform.app.InstrumentationRegistry;
+
 /**
  * Espresso UI tests for LoginActivity.
  * Ensures the login form handles validation errors correctly.
@@ -20,6 +22,10 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class LoginUiTest {
+
+    public LoginUiTest() {
+        super();
+    }
 
     @Rule
     public ActivityScenarioRule<LoginActivity> activityRule =

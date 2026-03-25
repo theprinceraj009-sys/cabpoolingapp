@@ -282,7 +282,7 @@ public class SyncManager {
         map.put("role", user.getRole());
         map.put("campusId", user.getCampusId());
         map.put("profilePhotoUrl", user.getProfilePhotoUrl());
-        map.put("phoneNumber", user.obtainPhoneNumberString());
+        map.put("phoneNumber", user.getPhoneNumber());
         map.put("subscriptionTier", user.getSubscriptionTier());
         map.put("isBanned", user.isBanned());
         map.put("isAdmin", user.isAdmin());

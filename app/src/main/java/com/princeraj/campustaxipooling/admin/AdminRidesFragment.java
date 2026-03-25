@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,31 +16,34 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.Ride;
+import com.princeraj.campustaxipooling.repository.IAdminRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Admin Ride Management list.
  * Allows searching by route, filtering by ACTIVE/FULL/DELETED,
  * and clicking to hard-delete fully if harmful.
  */
+@AndroidEntryPoint
 public class AdminRidesFragment extends Fragment {
 
     private RecyclerView ridesRecyclerView;
-    private TextInputEditText searchEt;
+    private EditText searchEt;
     private ChipGroup statusChipGroup;
 
     private AdminRideAdapter adapter;
     private final List<Ride> allRides = new ArrayList<>();
     private final List<Ride> filteredRides = new ArrayList<>();
 
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    IAdminRepository adminRepo;
 
     private String currentStatus = "ACTIVE"; // "ACTIVE" | "FULL" | "DELETED" | "ALL"
 
@@ -79,14 +83,14 @@ public class AdminRidesFragment extends Fragment {
     }
 
     private void setupFilterChips() {
-        statusChipGroup.setOnCheckedStateChangeListener((group, ids) -> {
-            if (ids.isEmpty()) {
+        statusChipGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == -1) {
                 currentStatus = "ALL";
             } else {
-                int id = ids.get(0);
-                if (id == R.id.chipActive) currentStatus = "ACTIVE";
-                else if (id == R.id.chipFull) currentStatus = "FULL";
-                else if (id == R.id.chipDeleted) currentStatus = "DELETED";
+                if (checkedId == R.id.chipActive) currentStatus = "ACTIVE";
+                else if (checkedId == R.id.chipFull) currentStatus = "FULL";
+                else if (checkedId == R.id.chipDeleted) currentStatus = "DELETED";
+                else currentStatus = "ALL";
             }
 
             applyFilter(searchEt.getText() != null ? searchEt.getText().toString() : "");
@@ -94,19 +98,13 @@ public class AdminRidesFragment extends Fragment {
     }
 
     private void loadAllRides() {
-        db.collection("rides")
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .addSnapshotListener((snapshots, error) -> {
-                    if (error != null || snapshots == null) return;
-                    
-                    allRides.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        Ride ride = doc.toObject(Ride.class);
-                        if (ride != null) allRides.add(ride);
-                    }
-                    
-                    applyFilter(searchEt.getText() != null ? searchEt.getText().toString() : "");
-                });
+        adminRepo.getAllRides().observe(getViewLifecycleOwner(), result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                allRides.clear();
+                allRides.addAll(result.getData());
+                applyFilter(searchEt.getText() != null ? searchEt.getText().toString() : "");
+            }
+        });
     }
 
     private void applyFilter(String query) {
@@ -127,7 +125,7 @@ public class AdminRidesFragment extends Fragment {
             } else if (currentStatus.equals("DELETED")) {
                 matchesStatus = ride.isDeleted();
             } else {
-                matchesStatus = !ride.isDeleted() && currentStatus.equals(ride.getStatus());
+                matchesStatus = !ride.isDeleted() && currentStatus.equalsIgnoreCase(ride.getStatus());
             }
 
             if (matchesSearch && matchesStatus) {
@@ -139,12 +137,13 @@ public class AdminRidesFragment extends Fragment {
     }
 
     private void onForceDeleteRide(Ride ride) {
-        // Soft delete via Firestore if not already
-        db.collection("rides").document(ride.getRideId())
-                .update("isDeleted", true)
-                .addOnSuccessListener(a -> 
-                    Snackbar.make(ridesRecyclerView, "Ride deleted.", Snackbar.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> 
-                    Snackbar.make(ridesRecyclerView, "Failed to delete: " + e.getMessage(), Snackbar.LENGTH_SHORT).show());
+        adminRepo.reviewReport(ride.getRideId(), "DELETED", "Hard deleted by admin")
+                .observe(getViewLifecycleOwner(), result -> {
+                    if (result.isSuccess()) {
+                         Snackbar.make(ridesRecyclerView, "Ride deleted.", Snackbar.LENGTH_SHORT).show();
+                    } else if (result.isError()) {
+                         Snackbar.make(ridesRecyclerView, "Failed: " + result.getMessage(), Snackbar.LENGTH_SHORT).show();
+                    }
+                });
     }
 }

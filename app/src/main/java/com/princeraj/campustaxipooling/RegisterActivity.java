@@ -5,18 +5,19 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.princeraj.campustaxipooling.repository.UserRepository;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Registration screen. Collects name, roll number, department, campus email, and password.
  * Enforces campus email domain before calling Firebase Auth.
  */
+@AndroidEntryPoint
 public class RegisterActivity extends BaseActivity {
 
     private TextInputLayout nameLayout, rollLayout, departmentLayout, emailLayout, passwordLayout;
@@ -24,7 +25,8 @@ public class RegisterActivity extends BaseActivity {
     private MaterialButton registerBtn;
     private TextView loginTxt;
 
-    private final UserRepository userRepo = UserRepository.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,30 +106,32 @@ public class RegisterActivity extends BaseActivity {
 
         setLoading(true);
 
-        userRepo.registerUser(email, password, name, roll, dept)
-                .addOnSuccessListener(authResult -> {
-                    setLoading(false);
+        // Fix campusId to "CU_CHANDIGARH"
+        userRepo.registerUser(email, password, name, roll, dept, "CU_CHANDIGARH").observe(this, result -> {
+            if (result.isLoading()) return;
+
+            setLoading(false);
+            if (result.isSuccess()) {
+                Snackbar.make(registerBtn,
+                        "Account created! Please verify your email before logging in.",
+                        Snackbar.LENGTH_LONG).show();
+                // Sign out immediately — force email verification first
+                userRepo.logout();
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    startActivity(new Intent(this, LoginActivity.class));
+                    finishAffinity();
+                }, 2000);
+            } else {
+                String msg = result.getMessage();
+                if (msg != null && msg.contains("email address is already in use")) {
+                    emailLayout.setError("This email is already registered. Try logging in.");
+                } else {
                     Snackbar.make(registerBtn,
-                            "Account created! Please verify your email before logging in.",
+                            "Registration failed: " + msg,
                             Snackbar.LENGTH_LONG).show();
-                    // Sign out immediately — force email verification first
-                    userRepo.logout();
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        startActivity(new Intent(this, LoginActivity.class));
-                        finishAffinity();
-                    }, 2000);
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    String msg = e.getMessage();
-                    if (msg != null && msg.contains("email address is already in use")) {
-                        emailLayout.setError("This email is already registered. Try logging in.");
-                    } else {
-                        Snackbar.make(registerBtn,
-                                "Registration failed: " + msg,
-                                Snackbar.LENGTH_LONG).show();
-                    }
-                });
+                }
+            }
+        });
     }
 
     private void setLoading(boolean loading) {

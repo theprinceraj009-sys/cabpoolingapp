@@ -64,4 +64,28 @@
     <!-- Ride Status -->
     <string name="status_active">ACTIVE</string>
     <string name="status_completed">COMPLETED</string>
+    
+    <!-- Ride Details -->
+    <string name="from_label">FROM</string>
+    <string name="to_label">TO</string>
+    <string name="request_to_join">Request to Join</string>
+    <string name="report_ride">Report this Ride</string>
+    <string name="no_matches">No matches for your search.</string>
+
+    <!-- Phase 4: Ratings & Driver Verification -->
+    <string name="rate_partner_title">Rate Your Partner</string>
+    <string name="rate_hint">How was your pooling experience?</string>
+    <string name="comment_hint">Tell us more (Optional)</string>
+    <string name="btn_submit_rating">Submit Rating</string>
+    <string name="btn_not_now">Not Now</string>
+    <string name="rating_success">Thank you for your feedback!</string>
+    <string name="rating_error">Please select a rating score</string>
+    
+    <string name="verification_required_title">Verification Required</string>
+    <string name="verification_required_msg">To ensure safety, only verified drivers can post rides. Please complete your driver profile.</string>
+    <string name="btn_go_to_settings">Go to Profile</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Phase 5: Error Messaging -->
+    <string name="network_error_cache">Offline. Showing cached information.</string>
 </resources>

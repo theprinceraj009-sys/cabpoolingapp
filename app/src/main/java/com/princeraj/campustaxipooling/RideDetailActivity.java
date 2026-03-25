@@ -1,39 +1,39 @@
 package com.princeraj.campustaxipooling;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.model.Ride;
 import com.princeraj.campustaxipooling.model.SeatRequest;
-import com.princeraj.campustaxipooling.repository.RideRepository;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * Displays full details of a ride and allows the user to request a seat.
+ * Integrated with Phase 3 offline cache support.
  */
+@AndroidEntryPoint
 public class RideDetailActivity extends BaseActivity {
 
     private TextView sourceText, destinationText, timeText, fareText, seatsText;
     private TextView posterInitial, posterName, preferencesText;
     private MaterialButton requestRideBtn, reportRideBtn;
 
-    private final RideRepository rideRepo = RideRepository.getInstance();
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IRideRepository rideRepo;
+    
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     private Ride currentRide;
     private String rideId;
@@ -52,11 +52,13 @@ public class RideDetailActivity extends BaseActivity {
         bindViews();
 
         ImageView backBtn = findViewById(R.id.backBtn);
-        backBtn.setOnClickListener(v -> finish());
+        if (backBtn != null) {
+            backBtn.setOnClickListener(v -> finish());
+        }
 
         requestRideBtn.setOnClickListener(v -> requestJoin());
         reportRideBtn.setOnClickListener(v ->
-                Toast.makeText(this, "Reporting coming soon", Toast.LENGTH_SHORT).show());
+                Snackbar.make(requestRideBtn, "Reporting feature coming in next update.", Snackbar.LENGTH_SHORT).show());
 
         loadRide();
     }
@@ -75,23 +77,21 @@ public class RideDetailActivity extends BaseActivity {
     }
 
     private void loadRide() {
-        db.collection("rides").document(rideId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc == null || !doc.exists()) {
-                        Toast.makeText(this, "Ride not found.", Toast.LENGTH_SHORT).show();
-                        finish();
-                        return;
-                    }
-
-                    currentRide = doc.toObject(Ride.class);
-                    if (currentRide != null) {
-                        bindRideData(currentRide);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to load ride.", Toast.LENGTH_SHORT).show();
-                    finish();
-                });
+        rideRepo.getRideById(rideId).observe(this, result -> {
+            if (result.isLoading() && currentRide == null) return;
+            
+            if (result.getData() != null) {
+                currentRide = result.getData();
+                bindRideData(currentRide);
+                
+                if (result.isError()) {
+                    Snackbar.make(requestRideBtn, "Showing cached ride details", Snackbar.LENGTH_SHORT).show();
+                }
+            } else if (result.isError()) {
+                Toast.makeText(this, "Failed to load ride.", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
     }
 
     private void bindRideData(Ride ride) {
@@ -111,87 +111,56 @@ public class RideDetailActivity extends BaseActivity {
                 + " seats available");
 
         if (ride.getPostedByName() != null && !ride.getPostedByName().isEmpty()) {
-            posterInitial.setText(
-                    String.valueOf(ride.getPostedByName().charAt(0)).toUpperCase());
+            posterInitial.setText(String.valueOf(ride.getPostedByName().charAt(0)).toUpperCase());
             posterName.setText(ride.getPostedByName());
         }
 
         String prefs = ride.getPreferences();
-        preferencesText.setText(
-                (prefs != null && !prefs.isEmpty()) ? "📋 " + prefs : "No preferences set");
+        preferencesText.setText((prefs != null && !prefs.isEmpty()) ? "📋 " + prefs : "No preferences set");
 
-        // Disable join button if no seats or posted by current user
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        boolean isOwner = currentUser != null
-                && currentUser.getUid().equals(ride.getPostedByUid());
+        com.google.firebase.auth.FirebaseUser currentUser = userRepo.getCurrentFirebaseUser();
+        boolean isOwner = currentUser != null && currentUser.getUid().equals(ride.getPostedByUid());
 
         if (isOwner) {
             requestRideBtn.setText("This is your ride");
             requestRideBtn.setEnabled(false);
+            requestRideBtn.setAlpha(0.6f);
         } else if (!ride.hasSeatsAvailable()) {
             requestRideBtn.setText("Ride is Full");
             requestRideBtn.setEnabled(false);
+            requestRideBtn.setAlpha(0.6f);
+        } else {
+            requestRideBtn.setText("Request to Join");
+            requestRideBtn.setEnabled(true);
+            requestRideBtn.setAlpha(1.0f);
         }
     }
 
     private void requestJoin() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        com.google.firebase.auth.FirebaseUser user = userRepo.getCurrentFirebaseUser();
         if (user == null || currentRide == null) return;
-
-        if (currentRide.getSeatsRemaining() <= 0) {
-            Snackbar.make(requestRideBtn, "No seats available.", Snackbar.LENGTH_SHORT).show();
-            return;
-        }
 
         requestRideBtn.setEnabled(false);
         requestRideBtn.setText("Sending…");
 
-        // Check for duplicate pending request from same user
-        db.collection("rides").document(rideId)
-                .collection("seatRequests")
-                .whereEqualTo("requesterUid", user.getUid())
-                .whereEqualTo("status", "PENDING")
-                .get()
-                .addOnSuccessListener(existing -> {
-                    if (!existing.isEmpty()) {
-                        requestRideBtn.setText("Request Already Sent");
-                        Snackbar.make(requestRideBtn,
-                                "You already have a pending request for this ride.",
-                                Snackbar.LENGTH_SHORT).show();
-                        return;
+        userRepo.getUserProfile(user.getUid()).observe(this, result -> {
+           if (result.isSuccess() && result.getData() != null) {
+                String name = result.getData().getName();
+                SeatRequest request = new SeatRequest(user.getUid(), name != null ? name : user.getEmail(), "");
+
+                rideRepo.sendJoinRequest(rideId, request, currentRide.getPostedByUid()).observe(this, res -> {
+                    if (res.isLoading()) return;
+
+                    if (res.isSuccess()) {
+                        requestRideBtn.setText("Request Sent ✓");
+                        Snackbar.make(requestRideBtn, "Join request sent! Waiting for approval.", Snackbar.LENGTH_LONG).show();
+                    } else {
+                        requestRideBtn.setEnabled(true);
+                        requestRideBtn.setText("Request to Join");
+                        Snackbar.make(requestRideBtn, "Error: " + res.getMessage(), Snackbar.LENGTH_SHORT).show();
                     }
-
-                    // Fetch user's display name
-                    db.collection("users").document(user.getUid()).get()
-                            .addOnSuccessListener(userDoc -> {
-                                String name = userDoc.getString("name");
-                                if (name == null) name = user.getEmail();
-
-                                SeatRequest request = new SeatRequest(
-                                        user.getUid(), name, "");
-
-                                rideRepo.sendJoinRequest(rideId, request, currentRide.getPostedByUid())
-                                        .addOnSuccessListener(ref -> {
-                                            requestRideBtn.setText("Request Sent ✓");
-                                            Snackbar.make(requestRideBtn,
-                                                    "Join request sent! Waiting for approval.",
-                                                    Snackbar.LENGTH_LONG).show();
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            requestRideBtn.setEnabled(true);
-                                            requestRideBtn.setText("Request to Join");
-                                            Snackbar.make(requestRideBtn,
-                                                    "Failed to send request: " + e.getMessage(),
-                                                    Snackbar.LENGTH_SHORT).show();
-                                        });
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    requestRideBtn.setEnabled(true);
-                    requestRideBtn.setText("Request to Join");
-                    Snackbar.make(requestRideBtn,
-                            "Error checking existing requests.",
-                            Snackbar.LENGTH_SHORT).show();
                 });
+           }
+        });
     }
 }

@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isNotBanned() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned != true;
+    }
+
+    // ── USERS ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      // Only the user themselves or an admin can update profile
+      allow update: if isAdmin() || (isOwner(userId) && isNotBanned());
+      // Registration allows creating a new user document
+      allow create: if isSignedIn() && isOwner(userId);
+      allow delete: if isAdmin();
+    }
+
+    // ── RIDES ────────────────────────────────────────────────────────────────
+    match /rides/{rideId} {
+      allow read: if isSignedIn();
+      // Only verified drivers (verified server-side or by admin) can create
+      allow create: if isSignedIn() && isNotBanned(); 
+      // Only poster or admin can update/delete
+      allow update, delete: if isAdmin() || (isOwner(resource.data.postedByUid) && isNotBanned());
+
+      // ── SEAT REQUESTS (Sub-collection) ───────────────────────────────────
+      match /seatRequests/{requestId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isNotBanned();
+        // Only poster of the ride or the requester can update (accept/reject/cancel)
+        allow update: if isSignedIn() && (
+          isOwner(get(/databases/$(database)/documents/rides/$(rideId)).data.postedByUid) ||
+          isOwner(resource.data.requesterUid)
+        ) && isNotBanned();
+      }
+    }
+
+    // ── CONNECTIONS ──────────────────────────────────────────────────────────
+    match /connections/{connId} {
+      // Only participants or admin can read/update
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      // Only system (via Admin) or Ride poster can create connections (controlled by atomic transactions)
+      allow create: if isSignedIn() && isNotBanned();
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+    }
+
+    // ── CHATS / MESSAGES ─────────────────────────────────────────────────────
+    match /connections/{connId}/messages/{msgId} {
+      allow read: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/connections/$(connId)).data.participants || isAdmin());
+      allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/connections/$(connId)).data.participants) && isNotBanned();
+    }
+
+    // ── RATINGS ──────────────────────────────────────────────────────────────
+    match /ratings/{ratingId} {
+      allow read: if isSignedIn();
+      // Only the person who WAS part of the ride connection can rate
+      allow create: if isSignedIn() && isNotBanned(); 
+      allow update, delete: if isAdmin();
+    }
+
+    // ── REPORTS ──────────────────────────────────────────────────────────────
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && isNotBanned();
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

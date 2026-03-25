@@ -4,15 +4,11 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.princeraj.campustaxipooling.repository.UserRepository;
 
 import com.canhub.cropper.CropImageContract;
 import com.canhub.cropper.CropImageContractOptions;
@@ -30,11 +26,15 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * Allows the user to edit their name, department, and optional phone number.
  * Writes directly to the Firestore users/{uid} document.
  * Phone number is stored but only surfaced after a connection is created.
  */
+@AndroidEntryPoint
 public class EditProfileActivity extends BaseActivity {
 
     private TextInputLayout nameLayout, departmentLayout, phoneLayout, rollNumberLayout;
@@ -54,8 +54,8 @@ public class EditProfileActivity extends BaseActivity {
                 }
             });
 
-    private final UserRepository userRepo = UserRepository.getInstance();
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,45 +89,24 @@ public class EditProfileActivity extends BaseActivity {
         FirebaseUser user = userRepo.getCurrentFirebaseUser();
         if (user == null) return;
 
-        userRepo.getUserProfile(user.getUid())
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String name = doc.getString("name");
-                        String dept = doc.getString("department");
-                        String phone = doc.getString("phoneNumber");
-                        String roll = doc.getString("rollNumber");
-                        String avatarUrl = doc.getString("profileImageUrl");
-                        Boolean phonePrivacy = doc.getBoolean("isPhoneVisibleToMatches");
+        userRepo.getUserProfile(user.getUid()).observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                com.princeraj.campustaxipooling.model.User profile = result.getData();
+                nameEt.setText(profile.getName());
+                departmentEt.setText(profile.getDepartment());
+                phoneEt.setText(profile.getPhoneNumber());
+                rollNumberEt.setText(profile.getRollNumber());
+                switchPrivacyPhone.setChecked(profile.isPhoneVisibleToMatches());
 
-                        if (name != null) nameEt.setText(name);
-                        if (dept != null) departmentEt.setText(dept);
-                        if (phone != null) phoneEt.setText(phone);
-                        
-                        // Handle Roll Number: Firestore value > Email Substring
-                        if (roll != null && !roll.isEmpty()) {
-                            rollNumberEt.setText(roll);
-                        } else if (user.getEmail() != null) {
-                            String emailStr = user.getEmail();
-                            int atIndex = emailStr.indexOf("@");
-                            if (atIndex > 0) rollNumberEt.setText(emailStr.substring(0, atIndex));
-                        }
-
-                        if (phonePrivacy != null) {
-                            switchPrivacyPhone.setChecked(phonePrivacy);
-                        } else {
-                            switchPrivacyPhone.setChecked(true); // default
-                        }
-
-                        if (avatarUrl != null && !avatarUrl.isEmpty()) {
-                            Glide.with(this).load(avatarUrl).into(profileImageView);
-                        }
-                    } else if (user.getEmail() != null) {
-                        // Brand new profile - fallback to email for Roll Number
-                        String emailStr = user.getEmail();
-                        int atIndex = emailStr.indexOf("@");
-                        if (atIndex > 0) rollNumberEt.setText(emailStr.substring(0, atIndex));
-                    }
-                });
+                if (profile.getProfilePhotoUrl() != null && !profile.getProfilePhotoUrl().isEmpty()) {
+                    Glide.with(this).load(profile.getProfilePhotoUrl()).into(profileImageView);
+                }
+            } else if (user.getEmail() != null) {
+                String emailStr = user.getEmail();
+                int atIndex = emailStr.indexOf("@");
+                if (atIndex > 0) rollNumberEt.setText(emailStr.substring(0, atIndex));
+            }
+        });
     }
 
     private void saveChanges() {
@@ -161,22 +140,22 @@ public class EditProfileActivity extends BaseActivity {
         updates.put("name", name);
         updates.put("department", dept);
         if (!roll.isEmpty()) updates.put("rollNumber", roll);
-        updates.put("role", "STUDENT"); // Default tag
-        updates.put("email", user.getEmail());
-        if (!phone.isEmpty()) updates.put("phoneNumber", phone);
+        updates.put("phoneNumber", phone);
         updates.put("isPhoneVisibleToMatches", switchPrivacyPhone.isChecked());
-        updates.put("updatedAt", com.google.firebase.Timestamp.now());
 
         if (selectedImageUri != null) {
             byte[] compressedBytes = compressImageForFreeTier(selectedImageUri);
             if (compressedBytes != null) {
-                userRepo.uploadProfilePicture(user.getUid(), compressedBytes)
-                    .addOnSuccessListener(v -> completeProfileUpdate(updates, user.getUid()))
-                    .addOnFailureListener(e -> {
+                userRepo.uploadProfilePicture(user.getUid(), compressedBytes).observe(this, uploadRes -> {
+                    if (uploadRes.isSuccess()) {
+                       updates.put("profilePhotoUrl", uploadRes.getData());
+                       completeProfileUpdate(updates, user.getUid());
+                    } else if (uploadRes.isError()) {
                         setLoading(false);
-                        Snackbar.make(saveBtn, "Image upload failed", Snackbar.LENGTH_LONG).show();
-                    });
-                return; // Exit here, completeProfileUpdate runs on success
+                        Snackbar.make(saveBtn, "Image upload failed: " + uploadRes.getMessage(), Snackbar.LENGTH_LONG).show();
+                    }
+                });
+                return;
             }
         }
         
@@ -184,17 +163,16 @@ public class EditProfileActivity extends BaseActivity {
     }
 
     private void completeProfileUpdate(Map<String, Object> updates, String uid) {
-        db.collection("users").document(uid)
-                .set(updates, com.google.firebase.firestore.SetOptions.merge())
-                .addOnSuccessListener(v -> {
-                    setLoading(false);
-                    Snackbar.make(saveBtn, "Profile updated!", Snackbar.LENGTH_SHORT).show();
-                    saveBtn.postDelayed(this::finish, 1000);
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Snackbar.make(saveBtn, "Failed to update: " + e.getMessage(), Snackbar.LENGTH_LONG).show();
-                });
+        userRepo.updateUserProfile(uid, updates).observe(this, result -> {
+            if (result.isLoading()) return;
+            setLoading(false);
+            if (result.isSuccess()) {
+                Snackbar.make(saveBtn, "Profile updated!", Snackbar.LENGTH_SHORT).show();
+                saveBtn.postDelayed(this::finish, 1000);
+            } else {
+                Snackbar.make(saveBtn, "Failed to update: " + result.getMessage(), Snackbar.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void startCrop() {

@@ -2,6 +2,8 @@ package com.princeraj.campustaxipooling.model;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.PropertyName;
+import com.google.firebase.firestore.Exclude;
 
 /**
  * Represents a registered campus user.
@@ -24,6 +26,14 @@ public class User {
     private boolean isAdmin;      // Explicit boolean for Firestore rules & guard checks
     // Phase 6: Privacy
     private boolean isPhoneVisibleToMatches = true;
+
+    // Phase 4: Driver Verification & Ratings
+    private boolean isVerifiedDriver = false;
+    private String driverLicense;
+    private String vehicleModel;
+    private String vehicleNumber;
+    private long ratingCount = 0;
+    private double averageRating = 5.0; // Default rating
     
     private String banReason;
     private long reportCount;
@@ -52,8 +62,10 @@ public class User {
     // ── Getters ──────────────────────────────────────────────────────────────
 
     public String getUid() { return uid; }
-    /** Alias for @DocumentId uid field — consistent naming for adapter use */
+    
+    @PropertyName("userId")
     public String getUserId() { return uid; }
+    
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getRollNumber() { return rollNumber; }
@@ -64,7 +76,17 @@ public class User {
     public String getPhoneNumber() { return phoneNumber; }
     public String getSubscriptionTier() { return subscriptionTier; }
     public boolean isBanned() { return isBanned; }
+    
+    @PropertyName("isAdmin")
     public boolean getIsAdmin() { return isAdmin; }
+    
+    public boolean isVerifiedDriver() { return isVerifiedDriver; }
+    public String getDriverLicense() { return driverLicense; }
+    public String getVehicleModel() { return vehicleModel; }
+    public String getVehicleNumber() { return vehicleNumber; }
+    public long getRatingCount() { return ratingCount; }
+    public double getAverageRating() { return averageRating; }
+
     public String getBanReason() { return banReason; }
     public long getReportCount() { return reportCount; }
     public String getFcmToken() { return fcmToken; }
@@ -73,6 +95,9 @@ public class User {
 
     // ── Setters ──────────────────────────────────────────────────────────────
 
+    @PropertyName("userId")
+    public void setUserId(String userId) { this.uid = userId; }
+    
     public void setUid(String uid) { this.uid = uid; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
@@ -84,7 +109,21 @@ public class User {
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public void setSubscriptionTier(String subscriptionTier) { this.subscriptionTier = subscriptionTier; }
     public void setBanned(boolean banned) { isBanned = banned; }
+    
+    @PropertyName("isAdmin")
     public void setAdmin(boolean admin) { isAdmin = admin; }
+    
+    @PropertyName("premium")
+    public void setPremium(boolean premium) {
+        this.subscriptionTier = premium ? "PREMIUM" : "FREE";
+    }
+
+    public void setVerifiedDriver(boolean verifiedDriver) { isVerifiedDriver = verifiedDriver; }
+    public void setDriverLicense(String driverLicense) { this.driverLicense = driverLicense; }
+    public void setVehicleModel(String vehicleModel) { this.vehicleModel = vehicleModel; }
+    public void setVehicleNumber(String vehicleNumber) { this.vehicleNumber = vehicleNumber; }
+    public void setRatingCount(long ratingCount) { this.ratingCount = ratingCount; }
+    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }
     
     public boolean isPhoneVisibleToMatches() { return isPhoneVisibleToMatches; }
     public void setPhoneVisibleToMatches(boolean phoneVisibleToMatches) { isPhoneVisibleToMatches = phoneVisibleToMatches; }
@@ -97,6 +136,8 @@ public class User {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    @Exclude
+    @PropertyName("premium")
     public boolean isPremium() {
         return "PREMIUM".equals(subscriptionTier);
     }
@@ -106,6 +147,7 @@ public class User {
      * Checks both the boolean field (used in Firestore Security Rules)
      * and the role string (legacy support).
      */
+    @Exclude
     public boolean isAdmin() {
         return isAdmin || "ADMIN".equals(role);
     }

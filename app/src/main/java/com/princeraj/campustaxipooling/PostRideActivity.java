@@ -6,25 +6,24 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.princeraj.campustaxipooling.model.Ride;
-import com.princeraj.campustaxipooling.repository.RideRepository;
-import com.princeraj.campustaxipooling.repository.UserRepository;
+import com.princeraj.campustaxipooling.model.User;
+import com.princeraj.campustaxipooling.ui.dialog.VerificationDialogFragment;
 
 import java.util.Calendar;
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Screen for posting a new ride.
- * Validates all fields before writing to Firestore via RideRepository.
+ * Validates all fields before writing to local DB and Firestore.
  */
+@AndroidEntryPoint
 public class PostRideActivity extends BaseActivity {
 
     private TextInputLayout sourceLayout, destinationLayout;
@@ -33,8 +32,11 @@ public class PostRideActivity extends BaseActivity {
     private TextInputEditText dateEt, timeEt, fareEt, seatsEt, prefsEt;
     private MaterialButton postRideBtn;
 
-    private final RideRepository rideRepo = RideRepository.getInstance();
-    private final UserRepository userRepo = UserRepository.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IRideRepository rideRepo;
+    
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     private final Calendar selectedDateTime = Calendar.getInstance();
     private boolean dateSet = false;
@@ -49,7 +51,9 @@ public class PostRideActivity extends BaseActivity {
         setupDateTimePickers();
 
         ImageView backBtn = findViewById(R.id.backBtn);
-        backBtn.setOnClickListener(v -> finish());
+        if (backBtn != null) {
+            backBtn.setOnClickListener(v -> finish());
+        }
 
         postRideBtn.setOnClickListener(v -> attemptPostRide());
     }
@@ -74,7 +78,6 @@ public class PostRideActivity extends BaseActivity {
     }
 
     private void setupDateTimePickers() {
-        // Date picker
         dateEt.setOnClickListener(v -> {
             Calendar now = Calendar.getInstance();
             new DatePickerDialog(this,
@@ -91,7 +94,6 @@ public class PostRideActivity extends BaseActivity {
                     .show();
         });
 
-        // Time picker
         timeEt.setOnClickListener(v -> {
             Calendar now = Calendar.getInstance();
             new TimePickerDialog(this,
@@ -111,120 +113,102 @@ public class PostRideActivity extends BaseActivity {
     }
 
     private void attemptPostRide() {
-        // Clear all errors
-        sourceLayout.setError(null);
-        destinationLayout.setError(null);
-        dateLayout.setError(null);
-        timeLayout.setError(null);
-        fareLayout.setError(null);
-        seatsLayout.setError(null);
-
+        // Validation logic
         String source = getText(sourceEt);
         String destination = getText(destinationEt);
-        String routeDesc = getText(routeDescEt);
         String fareStr = getText(fareEt);
         String seatsStr = getText(seatsEt);
-        String prefs = getText(prefsEt);
 
-        boolean hasError = false;
-
-        if (TextUtils.isEmpty(source)) {
-            sourceLayout.setError("Source location is required");
-            hasError = true;
-        }
-        if (TextUtils.isEmpty(destination)) {
-            destinationLayout.setError("Destination is required");
-            hasError = true;
-        }
-        if (!dateSet) {
-            dateLayout.setError("Select departure date");
-            hasError = true;
-        }
-        if (!timeSet) {
-            timeLayout.setError("Select departure time");
-            hasError = true;
-        }
-        if (TextUtils.isEmpty(fareStr)) {
-            fareLayout.setError("Enter total fare");
-            hasError = true;
-        }
-        if (TextUtils.isEmpty(seatsStr)) {
-            seatsLayout.setError("Enter available seats");
-            hasError = true;
+        if (TextUtils.isEmpty(source) || TextUtils.isEmpty(destination) || !dateSet || !timeSet ||
+                TextUtils.isEmpty(fareStr) || TextUtils.isEmpty(seatsStr)) {
+            Snackbar.make(postRideBtn, R.string.fill_all_fields, Snackbar.LENGTH_SHORT).show();
+            return;
         }
 
-        if (hasError) return;
-
-        // Ensure journey is in the future (at least 30 minutes ahead)
         long journeyMillis = selectedDateTime.getTimeInMillis();
-        if (journeyMillis < System.currentTimeMillis() + (30 * 60 * 1000)) {
-            dateLayout.setError("Departure must be at least 30 minutes from now");
+        if (journeyMillis < System.currentTimeMillis()) {
+            Snackbar.make(postRideBtn, "Departure time must be in the future", Snackbar.LENGTH_SHORT).show();
             return;
         }
 
-        long fare = Long.parseLong(fareStr);
-        int seats = Integer.parseInt(seatsStr);
-
-        if (seats < 1 || seats > 8) {
-            seatsLayout.setError("Seats must be between 1 and 8");
-            return;
-        }
-
-        FirebaseUser fbUser = userRepo.getCurrentFirebaseUser();
-        if (fbUser == null) {
-            Snackbar.make(postRideBtn, "Session expired. Please log in again.",
-                    Snackbar.LENGTH_SHORT).show();
+        String currentUid = userRepo.getCurrentUserUid();
+        if (currentUid == null) {
+            Snackbar.make(postRideBtn, "Session expired. Please log in again.", Snackbar.LENGTH_SHORT).show();
             finish();
             return;
         }
 
         setLoading(true);
 
-        // Fetch current user name from Firestore, then post ride
-        userRepo.getUserProfile(fbUser.getUid())
-                .addOnSuccessListener(doc -> {
-                    String posterName = doc.getString("name");
-                    if (posterName == null) posterName = fbUser.getEmail();
+        // Phase 3/7: Modern Hilt+Repository pattern
+        userRepo.getUserProfile(currentUid)
+                .observe(this, result -> {
+                    if (result.isLoading()) return;
 
+                    if (result.isError()) {
+                        setLoading(false);
+                        Snackbar.make(postRideBtn, "Error fetching profile: " + result.getMessage(), Snackbar.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    User user = result.getData();
+                    if (!isFinishing() && user != null && !user.isVerifiedDriver() && !user.isAdmin()) {
+                        setLoading(false);
+                        showVerificationDialog();
+                        return;
+                    }
+
+                    String name = user != null ? user.getName() : "Anonymous";
                     Ride ride = new Ride(
-                            fbUser.getUid(),
-                            posterName,
+                            currentUid,
+                            name,
                             "CU_CHANDIGARH",
                             source,
                             destination,
                             new Timestamp(selectedDateTime.getTime()),
-                            fare,
-                            seats
+                            Long.parseLong(fareStr),
+                            Integer.parseInt(seatsStr)
                     );
-                    ride.setRouteDescription(routeDesc);
-                    ride.setPreferences(prefs);
+                    ride.setRouteDescription(getText(routeDescEt));
+                    ride.setPreferences(getText(prefsEt));
 
-                    rideRepo.postRide(ride)
-                            .addOnSuccessListener(docRef -> {
-                                setLoading(false);
-                                Snackbar.make(postRideBtn,
-                                        "Ride posted successfully! 🚕",
-                                        Snackbar.LENGTH_SHORT).show();
-                                finish();
-                            })
-                            .addOnFailureListener(e -> {
-                                setLoading(false);
-                                Snackbar.make(postRideBtn,
-                                        "Failed to post ride: " + e.getMessage(),
-                                        Snackbar.LENGTH_LONG).show();
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Snackbar.make(postRideBtn,
-                            "Could not fetch your profile. Try again.",
-                            Snackbar.LENGTH_SHORT).show();
+                    rideRepo.postRide(ride).observe(this, rideResult -> {
+                        if (rideResult.isLoading()) return;
+                        
+                        setLoading(false);
+                        if (rideResult.isSuccess()) {
+                            Snackbar.make(postRideBtn, "Ride posted successfully! 🚕", Snackbar.LENGTH_SHORT).show();
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1500);
+                        } else {
+                            Snackbar.make(postRideBtn, "Error: " + rideResult.getMessage(), Snackbar.LENGTH_LONG).show();
+                        }
+                    });
                 });
     }
 
     private void setLoading(boolean loading) {
+        if (isFinishing()) return;
         postRideBtn.setEnabled(!loading);
         postRideBtn.setText(loading ? "Posting…" : "Post Ride 🚕");
+    }
+
+    private void showVerificationDialog() {
+        if (getSupportFragmentManager().findFragmentByTag("verify_dialog") != null) return;
+        
+        VerificationDialogFragment dialog = new VerificationDialogFragment();
+        dialog.setListener(new VerificationDialogFragment.VerificationListener() {
+            @Override
+            public void onGoToSettings() {
+                // startActivity(new Intent(PostRideActivity.this, EditProfileActivity.class));
+                finish();
+            }
+
+            @Override
+            public void onCancel() {
+                // Keep the screen open
+            }
+        });
+        dialog.show(getSupportFragmentManager(), "verify_dialog");
     }
 
     private String getText(TextInputEditText field) {

@@ -17,7 +17,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.princeraj.campustaxipooling.ChatActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.Connection;
-import com.princeraj.campustaxipooling.repository.RideRepository;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.List;
  * Shows all active connections the user can chat in.
  * Powered by a real-time Firestore listener.
  */
+@AndroidEntryPoint
 public class ChatListFragment extends Fragment {
 
     private RecyclerView connectionsRecyclerView;

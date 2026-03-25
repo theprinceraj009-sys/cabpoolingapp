@@ -48,8 +48,10 @@ public class SettingsActivity extends BaseActivity {
         btnHindi.setOnClickListener(v -> setLanguage("hi"));
 
         MaterialButton btnGoToAccountSettings = findViewById(R.id.btnGoToAccountSettings);
-        btnGoToAccountSettings.setOnClickListener(v -> 
-            startActivity(new Intent(this, AccountSettingsActivity.class)));
+        if (btnGoToAccountSettings != null) {
+            btnGoToAccountSettings.setOnClickListener(v -> 
+                startActivity(new Intent(this, com.princeraj.campustaxipooling.AccountSettingsActivity.class)));
+        }
 
         switchDarkMode.setOnCheckedChangeListener((btnView, isChecked) -> {
             prefs.edit().putBoolean("is_dark_mode", isChecked).apply();

@@ -60,7 +60,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="FROM"
+                            android:text="@string/from_label"
                             android:textSize="10sp"
                             android:textColor="@color/text_hint"
                             android:letterSpacing="0.1"/>
@@ -100,7 +100,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="TO"
+                            android:text="@string/to_label"
                             android:textSize="10sp"
                             android:textColor="@color/text_hint"
                             android:letterSpacing="0.1"/>
@@ -262,7 +262,7 @@
             android:id="@+id/requestJoinBtn"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:text="Request to Join"
+            android:text="@string/request_to_join"
             android:textSize="16sp"
             android:textStyle="bold"
             android:backgroundTint="@color/brand_primary"
@@ -273,7 +273,7 @@
             android:id="@+id/reportRideBtn"
             android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:text="Report this Ride"
+            android:text="@string/report_ride"
             android:textSize="13sp"
             android:textColor="@color/status_error"
             android:backgroundTint="@color/bg_card"

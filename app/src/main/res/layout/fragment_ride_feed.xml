@@ -19,53 +19,68 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="20dp"
             android:background="@color/bg_dark">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/find_ride"
-                android:textSize="28sp"
-                android:textStyle="bold"
+                android:textSize="32sp"
+                android:fontFamily="sans-serif-condensed-medium"
                 android:textColor="@color/text_primary"
-                android:layout_marginBottom="4dp"/>
+                android:letterSpacing="-0.02"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/find_ride_subtitle"
                 android:textSize="14sp"
+                android:alpha="0.75"
                 android:textColor="@color/text_secondary"
-                android:layout_marginBottom="20dp"/>
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="24dp"/>
 
-            <!-- Search Bar Container -->
-            <FrameLayout
+            <!-- Improved Search Bar -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_card"
-                android:paddingHorizontal="16dp">
+                android:layout_height="54dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="27dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center_vertical"
-                    android:src="@android:drawable/ic_menu_search"
-                    app:tint="@color/text_secondary"/>
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/searchEt"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="36dp"
-                    android:background="@null"
-                    android:hint="@string/search_hint"
-                    android:textColorHint="@color/text_secondary"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:imeOptions="actionSearch"
-                    android:singleLine="true"/>
-            </FrameLayout>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="18dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@android:drawable/ic_search_category_default"
+                        app:tint="@color/brand_primary_light" />
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/searchEt"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="12dp"
+                        android:background="@null"
+                        android:hint="@string/search_hint"
+                        android:textColorHint="@color/text_hint"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:singleLine="true"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>

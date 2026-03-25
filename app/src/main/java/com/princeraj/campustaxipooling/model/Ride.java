@@ -90,11 +90,13 @@ public class Ride {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public boolean hasSeatsAvailable() {
-        return seatsRemaining > 0 && "ACTIVE".equals(status);
+        return seatsRemaining > 0 && isActive();
     }
 
     public boolean isActive() {
-        return "ACTIVE".equals(status) && !isDeleted;
+        boolean timeValid = journeyDateTime == null || 
+                   journeyDateTime.toDate().after(new java.util.Date());
+        return "ACTIVE".equals(status) && !isDeleted && timeValid;
     }
 
     public float getPerPersonFare() {

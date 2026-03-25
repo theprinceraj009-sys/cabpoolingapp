@@ -5,14 +5,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_dark">
+    android:background="?attr/android:colorBackground">
 
     <!-- Top app bar -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/bg_surface"
+        android:background="?attr/colorSurface"
         app:elevation="4dp">
 
         <LinearLayout
@@ -80,6 +80,16 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:tint="@color/brand_secondary"
                 android:contentDescription="Call Partner"/>
+
+            <ImageView
+                android:id="@+id/rateBtn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@android:drawable/btn_star_big_on"
+                android:padding="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/brand_primary"
+                android:contentDescription="Rate Partner"/>
         </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -99,7 +109,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:orientation="horizontal"
-        android:background="@color/bg_surface"
+        android:background="?attr/colorSurface"
         android:gravity="center_vertical"
         android:padding="10dp">
 

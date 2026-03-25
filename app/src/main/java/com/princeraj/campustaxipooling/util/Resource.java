@@ -1,0 +1,57 @@
+package com.princeraj.campustaxipooling.util;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+/**
+ * A generic class that holds a value with its loading status.
+ * Standard "Enterprise" pattern for communicating data states (Loading, Success, Error)
+ * between Repository, ViewModel, and View.
+ */
+public class Resource<T> {
+
+    public enum Status {
+        SUCCESS,
+        ERROR,
+        LOADING
+    }
+
+    @NonNull
+    public final Status status;
+
+    @Nullable
+    public final T data;
+
+    @Nullable
+    public final String message;
+
+    private Resource(@NonNull Status status, @Nullable T data, @Nullable String message) {
+        this.status = status;
+        this.data = data;
+        this.message = message;
+    }
+
+    public static <T> Resource<T> success(@NonNull T data) {
+        return new Resource<>(Status.SUCCESS, data, null);
+    }
+
+    public static <T> Resource<T> error(String msg, @Nullable T data) {
+        return new Resource<>(Status.ERROR, data, msg);
+    }
+
+    public static <T> Resource<T> loading(@Nullable T data) {
+        return new Resource<>(Status.LOADING, data, null);
+    }
+
+    public boolean isSuccess() {
+        return status == Status.SUCCESS;
+    }
+
+    public boolean isLoading() {
+        return status == Status.LOADING;
+    }
+
+    public boolean isError() {
+        return status == Status.ERROR;
+    }
+}

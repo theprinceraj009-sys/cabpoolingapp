@@ -8,6 +8,8 @@ material = "1.10.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
 googleServices = "4.4.2"
+hilt = "2.48"
+crashlytics = "3.0.6"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -21,3 +23,5 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlytics" }

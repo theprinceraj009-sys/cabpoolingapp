@@ -7,17 +7,18 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.princeraj.campustaxipooling.repository.UserRepository;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Login screen. Validates campus email domain and ban state before allowing entry.
  */
+@AndroidEntryPoint
 public class LoginActivity extends BaseActivity {
 
     private TextInputLayout emailLayout, passwordLayout;
@@ -25,7 +26,8 @@ public class LoginActivity extends BaseActivity {
     private MaterialButton loginBtn;
     private TextView registerTxt, forgotPasswordTxt;
 
-    private final UserRepository userRepo = UserRepository.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,43 +93,46 @@ public class LoginActivity extends BaseActivity {
 
         setLoading(true);
 
-        userRepo.loginUser(email, password)
-                .addOnSuccessListener(authResult -> {
-                    if (authResult.getUser() != null && !authResult.getUser().isEmailVerified()) {
-                        setLoading(false);
-                        userRepo.logout();
-                        Snackbar.make(loginBtn,
-                                "Please verify your email first.",
-                                Snackbar.LENGTH_LONG).show();
-                        return;
-                    }
+        userRepo.loginUser(email, password).observe(this, result -> {
+            if (result.isLoading()) return;
 
-                    String uid = authResult.getUser() != null ? authResult.getUser().getUid() : "";
-                    userRepo.isUserBanned(uid)
-                            .addOnSuccessListener(isBanned -> {
-                                setLoading(false);
-                                if (isBanned) {
-                                    userRepo.logout();
-                                    Snackbar.make(loginBtn,
-                                            getString(R.string.account_banned),
-                                            Snackbar.LENGTH_INDEFINITE).show();
-                                } else {
-                                    startActivity(new Intent(this, HomeActivity.class));
-                                    finishAffinity();
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                setLoading(false);
-                                Snackbar.make(loginBtn,
-                                        "Unable to verify account status. Please check your connection.",
-                                        Snackbar.LENGTH_LONG).show();
-                                userRepo.logout();
-                            });
-                })
-                .addOnFailureListener(e -> {
+            if (result.isSuccess() && result.getData() != null) {
+                com.google.firebase.auth.FirebaseUser fbUser = result.getData().getUser();
+                if (fbUser != null && !fbUser.isEmailVerified()) {
                     setLoading(false);
-                    emailLayout.setError("Invalid email or password");
+                    userRepo.logout();
+                    Snackbar.make(loginBtn,
+                            "Please verify your email first.",
+                            Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+
+                String uid = fbUser != null ? fbUser.getUid() : "";
+                userRepo.isUserBanned(uid).observe(this, banResult -> {
+                    if (banResult.isLoading()) return;
+                    setLoading(false);
+                    if (banResult.isSuccess()) {
+                        if (Boolean.TRUE.equals(banResult.getData())) {
+                            userRepo.logout();
+                            Snackbar.make(loginBtn,
+                                    getString(R.string.account_banned),
+                                    Snackbar.LENGTH_INDEFINITE).show();
+                        } else {
+                            startActivity(new Intent(this, HomeActivity.class));
+                            finishAffinity();
+                        }
+                    } else {
+                        Snackbar.make(loginBtn,
+                                "Unable to verify account status. Please check your connection.",
+                                Snackbar.LENGTH_LONG).show();
+                        userRepo.logout();
+                    }
                 });
+            } else {
+                setLoading(false);
+                emailLayout.setError(result.getMessage() != null ? result.getMessage() : "Invalid email or password");
+            }
+        });
     }
 
     private void handleForgotPassword() {
@@ -136,11 +141,13 @@ public class LoginActivity extends BaseActivity {
             emailLayout.setError("Enter your email above first");
             return;
         }
-        userRepo.sendPasswordReset(email)
-                .addOnSuccessListener(v ->
-                        Toast.makeText(this, "Password reset email sent.", Toast.LENGTH_LONG).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        userRepo.sendPasswordReset(email).observe(this, result -> {
+            if (result.isSuccess()) {
+                Toast.makeText(this, "Password reset email sent.", Toast.LENGTH_LONG).show();
+            } else if (result.isError()) {
+                Toast.makeText(this, "Failed: " + result.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setLoading(boolean loading) {

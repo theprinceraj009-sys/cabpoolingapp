@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.User;
-import com.princeraj.campustaxipooling.repository.ReportRepository;
+import com.princeraj.campustaxipooling.repository.IAdminRepository;
 
 import java.util.List;
 
@@ -24,11 +24,11 @@ public class AdminUserAdapter extends
         RecyclerView.Adapter<AdminUserAdapter.UserViewHolder> {
 
     private final List<User> users;
-    private final ReportRepository reportRepo;
+    private final IAdminRepository adminRepo;
 
-    public AdminUserAdapter(List<User> users, ReportRepository reportRepo) {
+    public AdminUserAdapter(List<User> users, IAdminRepository adminRepo) {
         this.users = users;
-        this.reportRepo = reportRepo;
+        this.adminRepo = adminRepo;
     }
 
     @NonNull
@@ -41,7 +41,7 @@ public class AdminUserAdapter extends
 
     @Override
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
-        holder.bind(users.get(position), reportRepo);
+        holder.bind(users.get(position), adminRepo);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class AdminUserAdapter extends
             banToggleBtn = itemView.findViewById(R.id.banToggleBtn);
         }
 
-        void bind(User user, ReportRepository repo) {
+        void bind(User user, IAdminRepository repo) {
             // Avatar initial
             String name = user.getName() != null ? user.getName() : "?";
             userInitial.setText(String.valueOf(name.charAt(0)).toUpperCase());
@@ -98,20 +98,16 @@ public class AdminUserAdapter extends
                 banToggleBtn.setBackgroundTintList(
                         android.content.res.ColorStateList.valueOf(0xFF00D4AA));
                 banToggleBtn.setOnClickListener(v -> {
-                    banToggleBtn.setEnabled(false);
-                    repo.unbanUser(user.getUserId())
-                            .addOnSuccessListener(a -> banToggleBtn.setEnabled(true))
-                            .addOnFailureListener(e -> banToggleBtn.setEnabled(true));
+                    repo.updateUserBanStatus(user.getUid(), false, "");
+                    banToggleBtn.setEnabled(true);
                 });
             } else {
                 banToggleBtn.setText("Ban");
                 banToggleBtn.setBackgroundTintList(
                         android.content.res.ColorStateList.valueOf(0xFFFF5370));
                 banToggleBtn.setOnClickListener(v -> {
-                    banToggleBtn.setEnabled(false);
-                    repo.banUser(user.getUserId(), "Banned by admin")
-                            .addOnSuccessListener(a -> banToggleBtn.setEnabled(true))
-                            .addOnFailureListener(e -> banToggleBtn.setEnabled(true));
+                    repo.updateUserBanStatus(user.getUid(), true, "Banned by admin");
+                    banToggleBtn.setEnabled(true);
                 });
             }
         }

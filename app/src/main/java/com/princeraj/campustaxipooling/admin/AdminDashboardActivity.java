@@ -1,24 +1,16 @@
 package com.princeraj.campustaxipooling.admin;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
-
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.LoginActivity;
 import com.princeraj.campustaxipooling.BaseActivity;
 import com.princeraj.campustaxipooling.R;
-import com.princeraj.campustaxipooling.admin.AdminReportsFragment;
-import com.princeraj.campustaxipooling.admin.AdminUsersFragment;
-import com.princeraj.campustaxipooling.admin.AdminRidesFragment;
+
+import java.util.Map;
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Admin Dashboard entry point.
@@ -29,12 +21,17 @@ import com.princeraj.campustaxipooling.admin.AdminRidesFragment;
  *
  * Sub-screens loaded as Fragments into adminFragmentContainer.
  */
+@AndroidEntryPoint
 public class AdminDashboardActivity extends BaseActivity {
 
     private TextView adminEmailText;
     private TextView totalUsersCount, activeRidesCount, pendingReportsCount;
 
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IAdminRepository adminRepo;
+    
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,48 +62,41 @@ public class AdminDashboardActivity extends BaseActivity {
      * If not admin: ejects back to LoginActivity.
      */
     private void guardAndLoad() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
+        String currentUid = userRepo.getCurrentUserUid();
+        if (currentUid == null) {
             ejectToLogin();
             return;
         }
 
-        adminEmailText.setText(user.getEmail());
-
-        db.collection("users").document(user.getUid()).get()
-                .addOnSuccessListener(doc -> {
-                    Boolean isAdmin = doc.getBoolean("isAdmin");
-                    if (isAdmin == null || !isAdmin) {
-                        ejectToLogin();
-                        return;
-                    }
+        // Use UserRepository for simple check
+        userRepo.getUserProfile(currentUid).observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                adminEmailText.setText(result.getData().getEmail());
+                if (!result.getData().isAdmin()) {
+                    ejectToLogin();
+                } else {
                     // Admin confirmed — load default sub-screen and stats
                     loadFragment(new AdminReportsFragment());
                     loadStats();
-                })
-                .addOnFailureListener(e -> ejectToLogin());
+                }
+            } else if (result.isError()) {
+                ejectToLogin();
+            }
+        });
     }
 
     private void loadStats() {
-        // Total users
-        db.collection("users").get()
-                .addOnSuccessListener(snap ->
-                        totalUsersCount.setText(String.valueOf(snap.size())));
-
-        // Active rides
-        db.collection("rides").whereEqualTo("status", "ACTIVE").get()
-                .addOnSuccessListener(snap ->
-                        activeRidesCount.setText(String.valueOf(snap.size())));
-
-        // Pending reports
-        db.collection("reports").whereEqualTo("status", "PENDING").get()
-                .addOnSuccessListener(snap -> {
-                    int count = snap.size();
-                    pendingReportsCount.setText(String.valueOf(count));
-                });
+        adminRepo.getSystemStats().observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                Map<String, Long> stats = result.getData();
+                totalUsersCount.setText(String.valueOf(stats.getOrDefault("totalUsers", 0L)));
+                activeRidesCount.setText(String.valueOf(stats.getOrDefault("activeRides", 0L)));
+                pendingReportsCount.setText(String.valueOf(stats.getOrDefault("pendingReports", 0L)));
+            }
+        });
     }
 
-    void loadFragment(Fragment fragment) {
+    void loadFragment(androidx.fragment.app.Fragment fragment) {
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.adminFragmentContainer, fragment)

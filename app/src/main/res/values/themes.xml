@@ -1,55 +1,42 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme — Uber/Ola style, forced dark, no action bar -->
-    <style name="Base.Theme.CampusTaxiPooling" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- Base application theme — Adaptively switches between Light and Dark -->
+    <style name="Base.Theme.CampusTaxiPooling" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Cab Yellow as primary CTA color -->
         <item name="colorPrimary">@color/brand_secondary</item>
         <item name="colorOnPrimary">@color/black</item>
-        <item name="colorPrimaryContainer">@color/bg_card</item>
-        <item name="colorOnPrimaryContainer">@color/text_primary</item>
-        <!-- Ultra-dark black backgrounds -->
-        <item name="android:colorBackground">@color/bg_dark</item>
-        <item name="colorOnBackground">@color/text_primary</item>
-        <item name="colorSurface">@color/bg_surface</item>
-        <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorSurfaceVariant">@color/bg_card</item>
-        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
-        <item name="colorSecondary">@color/brand_accent</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="colorError">@color/status_error</item>
-        <!-- Window -->
-        <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="android:statusBarColor">@color/bg_dark</item>
-        <item name="android:navigationBarColor">@color/bg_surface</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-        <!-- TextInputLayout accent = Yellow -->
-        <item name="colorControlActivated">@color/brand_secondary</item>
-        <item name="colorControlHighlight">@color/brand_secondary</item>
+        
+        <!-- Adaptive Backgrounds -->
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        
+        <!-- Custom UI element tokens -->
+        <item name="colorPrimaryContainer">?attr/colorSurfaceVariant</item>
+        <item name="colorOnPrimaryContainer">?attr/colorOnSurface</item>
+        
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
     </style>
 
     <style name="Theme.CampusTaxiPooling" parent="Base.Theme.CampusTaxiPooling" />
 
-    <!-- Splash Theme (fullscreen, no animation) -->
     <style name="Theme.CampusTaxiPooling.Splash" parent="Base.Theme.CampusTaxiPooling">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowNoTitle">true</item>
     </style>
 
-    <!-- Yellow CTA Button style -->
     <style name="Widget.CampusTaxi.Button.Yellow" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/brand_secondary</item>
         <item name="android:textColor">@color/black</item>
         <item name="android:textStyle">bold</item>
     </style>
-
-    <!-- Ghost / Outline Button -->
-    <style name="Widget.CampusTaxi.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="strokeColor">@color/brand_secondary</item>
-        <item name="android:textColor">@color/brand_secondary</item>
-    </style>
-
-    <!-- Circular Image Shape Appearance -->
+    
     <style name="CircleImageView" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="CustomAlertDialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
     </style>
 </resources>

@@ -139,7 +139,7 @@ public class UserRepository {
                 .continueWith(task -> {
                     if (task.isSuccessful() && task.getResult() != null
                             && task.getResult().exists()) {
-                        Boolean banned = task.getResult().getBoolean("isBanned");
+                        Boolean banned = task.getResult().getBoolean("isUserBanned");
                         return Boolean.TRUE.equals(banned);
                     }
                     return false;

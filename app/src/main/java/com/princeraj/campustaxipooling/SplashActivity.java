@@ -5,15 +5,16 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.firebase.auth.FirebaseUser;
 import com.princeraj.campustaxipooling.repository.UserRepository;
+
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Entry point. Checks auth state and routes accordingly.
  * Delay: 1.5 seconds for branding visibility.
  */
+@AndroidEntryPoint
 public class SplashActivity extends BaseActivity {
 
     private final UserRepository userRepo = UserRepository.getInstance();

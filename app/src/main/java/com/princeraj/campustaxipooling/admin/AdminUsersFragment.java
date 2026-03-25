@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,33 +15,34 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.ChipGroup;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.User;
-import com.princeraj.campustaxipooling.repository.ReportRepository;
+import com.princeraj.campustaxipooling.repository.IAdminRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Admin user management list.
  * Supports search by name/email, and filter by All / Banned / Flagged (3+ reports).
  * Ban/Unban is done inline via AdminUserAdapter.
  */
+@AndroidEntryPoint
 public class AdminUsersFragment extends Fragment {
 
     private RecyclerView usersRecyclerView;
-    private TextInputEditText searchEt;
+    private EditText searchEt;
     private ChipGroup filterChipGroup;
 
     private AdminUserAdapter adapter;
     private final List<User> allUsers = new ArrayList<>();
     private final List<User> filteredUsers = new ArrayList<>();
 
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private final ReportRepository reportRepo = ReportRepository.getInstance();
+    @Inject
+    IAdminRepository adminRepo;
 
     // Filter state
     private String currentFilter = "ALL";
@@ -61,7 +63,7 @@ public class AdminUsersFragment extends Fragment {
         searchEt = view.findViewById(R.id.searchEt);
         filterChipGroup = view.findViewById(R.id.filterChipGroup);
 
-        adapter = new AdminUserAdapter(filteredUsers, reportRepo);
+        adapter = new AdminUserAdapter(filteredUsers, adminRepo);
         usersRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         usersRecyclerView.setAdapter(adapter);
 
@@ -81,11 +83,11 @@ public class AdminUsersFragment extends Fragment {
     }
 
     private void setupFilterChips() {
-        filterChipGroup.setOnCheckedStateChangeListener((group, ids) -> {
-            if (ids.isEmpty()) return;
-            int id = ids.get(0);
-            if (id == R.id.chipBanned) currentFilter = "BANNED";
-            else if (id == R.id.chipFlagged) currentFilter = "FLAGGED";
+        filterChipGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == -1) return;
+            
+            if (checkedId == R.id.chipBanned) currentFilter = "BANNED";
+            else if (checkedId == R.id.chipFlagged) currentFilter = "FLAGGED";
             else currentFilter = "ALL";
 
             String query = searchEt.getText() != null
@@ -95,20 +97,14 @@ public class AdminUsersFragment extends Fragment {
     }
 
     private void loadUsers() {
-        db.collection("users")
-                .orderBy("name")
-                .addSnapshotListener((snapshots, error) -> {
-                    if (error != null || snapshots == null) return;
-
-                    allUsers.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        User user = doc.toObject(User.class);
-                        if (user != null) allUsers.add(user);
-                    }
-
-                    applyFilter(searchEt.getText() != null
-                            ? searchEt.getText().toString() : "");
-                });
+        adminRepo.getAllUsers().observe(getViewLifecycleOwner(), result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                allUsers.clear();
+                allUsers.addAll(result.getData());
+                applyFilter(searchEt.getText() != null
+                        ? searchEt.getText().toString() : "");
+            }
+        });
     }
 
     private void applyFilter(String query) {

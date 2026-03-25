@@ -95,13 +95,25 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
 
             // Status badge (Auto-calculate completion)
             String status = ride.getStatus() != null ? ride.getStatus() : "ACTIVE";
-            if ("ACTIVE".equals(status) && ride.getJourneyDateTime() != null &&
-                    ride.getJourneyDateTime().toDate().before(new java.util.Date())) {
+            boolean isTimePassed = ride.getJourneyDateTime() != null &&
+                    ride.getJourneyDateTime().toDate().before(new java.util.Date());
+
+            if ("ACTIVE".equals(status) && isTimePassed) {
                 status = "COMPLETED";
             }
-            statusBadge.setText(status);
+
+            statusBadge.setText(status.toUpperCase());
+            
+            // Phase 7: Proper semantic coloring for badges
             if ("COMPLETED".equals(status)) {
-                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        itemView.getContext().getColor(R.color.status_success)));
+            } else if ("CANCELLED".equals(status)) {
+                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        itemView.getContext().getColor(R.color.status_error)));
+            } else {
+                statusBadge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        itemView.getContext().getColor(R.color.brand_secondary)));
             }
 
             // Route
@@ -133,12 +145,15 @@ public class RideFeedAdapter extends RecyclerView.Adapter<RideFeedAdapter.RideVi
             if ("COMPLETED".equals(status)) {
                 viewRideBtn.setText("Ride Ended");
                 viewRideBtn.setEnabled(false);
+                viewRideBtn.setAlpha(0.6f);
             } else if (!ride.hasSeatsAvailable()) {
                 viewRideBtn.setText("Ride Full");
                 viewRideBtn.setEnabled(false);
+                viewRideBtn.setAlpha(0.6f);
             } else {
                 viewRideBtn.setText("View & Request Seat");
                 viewRideBtn.setEnabled(true);
+                viewRideBtn.setAlpha(1.0f);
             }
 
             viewRideBtn.setOnClickListener(v -> listener.onRideClick(ride));

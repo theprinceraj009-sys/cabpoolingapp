@@ -12,17 +12,15 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.princeraj.campustaxipooling.EditProfileActivity;
 import com.princeraj.campustaxipooling.LoginActivity;
 import com.princeraj.campustaxipooling.ui.settings.SettingsActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.User;
-import com.princeraj.campustaxipooling.repository.RideRepository;
-import com.princeraj.campustaxipooling.repository.UserRepository;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Full profile screen. Fetches user data from Firestore and shows:
@@ -30,6 +28,7 @@ import com.princeraj.campustaxipooling.repository.UserRepository;
  *  - Stats: rides posted, rides joined (connection count), subscription tier
  *  - Edit Profile and Logout actions
  */
+@AndroidEntryPoint
 public class ProfileFragment extends Fragment {
 
     private TextView avatarInitial, profileName, profileEmail;
@@ -38,8 +37,11 @@ public class ProfileFragment extends Fragment {
     private MaterialButton editProfileBtn, settingsBtn, logoutBtn;
     private com.google.android.material.imageview.ShapeableImageView profileImageView;
 
-    private final UserRepository userRepo = UserRepository.getInstance();
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IUserRepository userRepo;
+
+    @Inject
+    com.princeraj.campustaxipooling.repository.IRideRepository rideRepo;
 
     @Nullable
     @Override
@@ -94,21 +96,22 @@ public class ProfileFragment extends Fragment {
         FirebaseUser fbUser = userRepo.getCurrentFirebaseUser();
         if (fbUser == null) return;
 
-        userRepo.getUserProfile(fbUser.getUid())
-                .addOnSuccessListener(doc -> {
-                    if (!isAdded() || doc == null || !doc.exists()) return;
-                    bindUserData(doc, fbUser.getEmail());
-                });
+        userRepo.getUserProfile(fbUser.getUid()).observe(getViewLifecycleOwner(), result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                bindUserData(result.getData());
+            }
+        });
 
         loadStats(fbUser.getUid());
     }
 
-    private void bindUserData(DocumentSnapshot doc, String email) {
-        String name = doc.getString("name");
-        String roll = doc.getString("rollNumber");
-        String dept = doc.getString("department");
-        String tier = doc.getString("subscriptionTier");
-        String avatarUrl = doc.getString("profileImageUrl");
+    private void bindUserData(User user) {
+        String name = user.getName();
+        String roll = user.getRollNumber();
+        String email = user.getEmail();
+        String dept = user.getDepartment();
+        String tier = user.getSubscriptionTier();
+        String avatarUrl = user.getProfilePhotoUrl();
         
         if ((roll == null || roll.trim().isEmpty()) && email != null) {
             int atIndex = email.indexOf("@");
@@ -151,23 +154,21 @@ public class ProfileFragment extends Fragment {
 
     private void loadStats(String uid) {
         // Count rides posted
-        db.collection("rides")
-                .whereEqualTo("postedByUid", uid)
-                .whereEqualTo("isDeleted", false)
-                .get()
-                .addOnSuccessListener(snap -> {
-                    if (!isAdded()) return;
-                    ridesPostedCount.setText(String.valueOf(snap.size()));
-                });
+        rideRepo.getMyPostedRides(uid).observe(getViewLifecycleOwner(), result -> {
+           if (result.getData() != null) {
+               ridesPostedCount.setText(String.valueOf(result.getData().size()));
+           }
+        });
 
         // Count rides joined (active connections)
-        db.collection("connections")
-                .whereArrayContains("participants", uid)
-                .whereEqualTo("isActive", true)
-                .get()
-                .addOnSuccessListener(snap -> {
-                    if (!isAdded()) return;
-                    ridesJoinedCount.setText(String.valueOf(snap.size()));
-                });
+        rideRepo.getMyConnections(uid).observe(getViewLifecycleOwner(), result -> {
+            if (result.getData() != null) {
+                int activeCount = 0;
+                for (com.princeraj.campustaxipooling.model.Connection conn : result.getData()) {
+                    if (conn.isActive()) activeCount++;
+                }
+                ridesJoinedCount.setText(String.valueOf(activeCount));
+            }
+        });
     }
 }

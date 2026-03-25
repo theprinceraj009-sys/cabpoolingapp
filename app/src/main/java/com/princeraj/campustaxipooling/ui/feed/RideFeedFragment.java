@@ -7,6 +7,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
@@ -19,21 +20,21 @@ import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.princeraj.campustaxipooling.PostRideActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.model.Ride;
-import com.princeraj.campustaxipooling.repository.RideRepository;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * The main ride browse feed. Shows all ACTIVE rides from the campus.
- * Uses a real-time Firestore listener so new rides appear without refresh.
+ * Uses a reactive Repository layer with Room-first caching.
  */
+@AndroidEntryPoint
 public class RideFeedFragment extends Fragment {
 
     private ShimmerFrameLayout shimmerViewContainer;
@@ -46,10 +47,8 @@ public class RideFeedFragment extends Fragment {
     private final List<Ride> allRides = new ArrayList<>();
     private final List<Ride> filteredRides = new ArrayList<>();
 
-    private final RideRepository rideRepo = RideRepository.getInstance();
-    private ListenerRegistration rideListener;
-    private int currentLimit = 20;
-    private boolean isLoadingMore = false;
+    @Inject
+    com.princeraj.campustaxipooling.repository.IRideRepository rideRepo;
 
     @Nullable
     @Override
@@ -79,37 +78,14 @@ public class RideFeedFragment extends Fragment {
 
     private void setupRecyclerView() {
         adapter = new RideFeedAdapter(filteredRides, ride ->
-                // Navigate to RideDetailActivity with rideId
                 startActivity(
                         new Intent(requireContext(),
                                 com.princeraj.campustaxipooling.RideDetailActivity.class)
                                 .putExtra("rideId", ride.getRideId())
                 )
         );
-        LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
-        ridesRecyclerView.setLayoutManager(layoutManager);
+        ridesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         ridesRecyclerView.setAdapter(adapter);
-
-        ridesRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                if (dy > 0 && !isLoadingMore) {
-                    int visibleItemCount = layoutManager.getChildCount();
-                    int totalItemCount = layoutManager.getItemCount();
-                    int pastVisibleItems = layoutManager.findFirstVisibleItemPosition();
-
-                    if ((visibleItemCount + pastVisibleItems) >= totalItemCount) {
-                        isLoadingMore = true;
-                        currentLimit += 20;
-                        if (rideListener != null) {
-                            rideListener.remove();
-                            rideListener = null;
-                        }
-                        loadRides();
-                    }
-                }
-            }
-        });
     }
 
     private void setupSearch() {
@@ -126,38 +102,42 @@ public class RideFeedFragment extends Fragment {
         String uid = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
 
-        // Real-time listener on the ride feed query with dynamic limit
-        rideListener = rideRepo.getRideFeed("CU_CHANDIGARH", uid, currentLimit)
-                .addSnapshotListener((snapshots, error) -> {
-                    isLoadingMore = false;
-                    
-                    // Stop and hide shimmer
-                    if (shimmerViewContainer != null && shimmerViewContainer.isShimmerStarted()) {
-                        shimmerViewContainer.stopShimmer();
-                        shimmerViewContainer.setVisibility(View.GONE);
-                    }
+        // Phase 3: Observe LiveData from repository (Room -> Firestore)
+        rideRepo.getRideFeed("CU_CHANDIGARH", uid, 50).observe(getViewLifecycleOwner(), result -> {
+            if (result.isLoading() && allRides.isEmpty()) {
+                if (shimmerViewContainer != null) {
+                    shimmerViewContainer.startShimmer();
+                    shimmerViewContainer.setVisibility(View.VISIBLE);
+                }
+                return;
+            }
 
-                    if (error != null || snapshots == null) return;
+            // Stop and hide shimmer
+            if (shimmerViewContainer != null) {
+                shimmerViewContainer.stopShimmer();
+                shimmerViewContainer.setVisibility(View.GONE);
+            }
 
-                    allRides.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        Ride ride = doc.toObject(Ride.class);
-                        if (ride != null && !ride.isDeleted() && "ACTIVE".equals(ride.getStatus())) {
-                            allRides.add(ride);
-                        }
-                    }
+            if (result.getData() != null) {
+                allRides.clear();
+                allRides.addAll(result.getData());
+                
+                // If it's a cached result with an error (offline fallback)
+                if (result.isError() && result.getData() != null) {
+                    com.google.android.material.snackbar.Snackbar.make(requireView(), 
+                            "Offline mode. Showing cached rides.", 
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show();
+                }
 
-                    // Sort locally by journeyDateTime (ASCENDING) to avoid Firestore composite index requirement
-                    allRides.sort((r1, r2) -> {
-                        if (r1.getJourneyDateTime() == null || r2.getJourneyDateTime() == null) return 0;
-                        return r1.getJourneyDateTime().compareTo(r2.getJourneyDateTime());
-                    });
-
-                    // Apply current search filter
-                    String currentQuery = searchEt.getText() != null
-                            ? searchEt.getText().toString() : "";
-                    filterRides(currentQuery);
+                // Sort locally by journeyDateTime (ASCENDING) - API 21 compatible
+                java.util.Collections.sort(allRides, (r1, r2) -> {
+                    if (r1.getJourneyDateTime() == null || r2.getJourneyDateTime() == null) return 0;
+                    return r1.getJourneyDateTime().compareTo(r2.getJourneyDateTime());
                 });
+
+                filterRides(searchEt.getText() != null ? searchEt.getText().toString() : "");
+            }
+        });
     }
 
     private void filterRides(String query) {
@@ -178,28 +158,18 @@ public class RideFeedFragment extends Fragment {
 
         adapter.notifyDataSetChanged();
 
-        // Show/hide empty state with custom message
         if (filteredRides.isEmpty()) {
             ridesRecyclerView.setVisibility(View.GONE);
             emptyStateView.setVisibility(View.VISIBLE);
             
-            // Customize the standardized empty state
+            // Phase 7: Localized labels
             ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("🚕");
-            ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No rides found");
+            ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText(getString(R.string.empty_title));
             ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle))
-                    .setText(sanitizedQuery.isEmpty() ? "Be the first to post a campus ride!" : "Try adjusting your search query.");
+                    .setText(sanitizedQuery.isEmpty() ? getString(R.string.empty_desc) : "No matches for your search.");
         } else {
             ridesRecyclerView.setVisibility(View.VISIBLE);
             emptyStateView.setVisibility(View.GONE);
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        if (rideListener != null) {
-            rideListener.remove();
-            rideListener = null;
         }
     }
 }

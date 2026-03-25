@@ -22,16 +22,19 @@ import com.princeraj.campustaxipooling.PostRideActivity;
 import com.princeraj.campustaxipooling.R;
 import com.princeraj.campustaxipooling.RideDetailActivity;
 import com.princeraj.campustaxipooling.model.Ride;
-import com.princeraj.campustaxipooling.repository.RideRepository;
+import com.princeraj.campustaxipooling.model.Ride;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * Shows all rides posted by the current user.
- * Powered by a real-time Firestore listener.
- * Each card shows cancel option for ACTIVE rides.
+ * Integrated with Phase 3 offline cache support.
  */
+@AndroidEntryPoint
 public class MyRidesFragment extends Fragment {
 
     private ShimmerFrameLayout shimmerViewContainer;
@@ -42,7 +45,8 @@ public class MyRidesFragment extends Fragment {
     private MyRidesAdapter adapter;
     private final List<Ride> myRides = new ArrayList<>();
 
-    private final RideRepository rideRepo = RideRepository.getInstance();
+    @Inject
+    com.princeraj.campustaxipooling.repository.IRideRepository rideRepo;
 
     @Nullable
     @Override
@@ -75,7 +79,13 @@ public class MyRidesFragment extends Fragment {
                         new Intent(requireContext(), RideDetailActivity.class)
                                 .putExtra("rideId", ride.getRideId())),
                 // Cancel → soft-delete via repo
-                ride -> rideRepo.cancelRide(ride.getRideId()),
+                ride -> rideRepo.cancelRide(ride.getRideId()).observe(getViewLifecycleOwner(), result -> {
+                    if (result.isSuccess()) {
+                         com.google.android.material.snackbar.Snackbar.make(requireView(), "Ride cancelled successfully", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show();
+                    } else if (result.isError()) {
+                         com.google.android.material.snackbar.Snackbar.make(requireView(), "Error cancelling ride.", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show();
+                    }
+                }),
                 // View Requests → SeatRequestsActivity
                 ride -> startActivity(
                         new Intent(requireContext(),
@@ -87,38 +97,44 @@ public class MyRidesFragment extends Fragment {
     }
 
     private void loadMyRides() {
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null
+                ? com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
 
-        rideRepo.getMyPostedRides(uid)
-                .addSnapshotListener((snapshots, error) -> {
-                    // Stop and hide shimmer
-                    if (shimmerViewContainer != null && shimmerViewContainer.isShimmerStarted()) {
-                        shimmerViewContainer.stopShimmer();
-                        shimmerViewContainer.setVisibility(View.GONE);
-                    }
+        // Phase 3: Observe LiveData from repository
+        rideRepo.getMyPostedRides(uid).observe(getViewLifecycleOwner(), result -> {
+            if (result.isLoading() && myRides.isEmpty()) {
+                if (shimmerViewContainer != null) {
+                    shimmerViewContainer.startShimmer();
+                    shimmerViewContainer.setVisibility(View.VISIBLE);
+                }
+                return;
+            }
 
-                    if (error != null || snapshots == null) return;
+            // Stop and hide shimmer
+            if (shimmerViewContainer != null) {
+                shimmerViewContainer.stopShimmer();
+                shimmerViewContainer.setVisibility(View.GONE);
+            }
 
-                    myRides.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        Ride ride = doc.toObject(Ride.class);
-                        if (ride != null) {
-                            myRides.add(ride);
-                        }
-                    }
+            if (result.getData() != null) {
+                myRides.clear();
+                myRides.addAll(result.getData());
+                
+                adapter.notifyDataSetChanged();
 
-                    adapter.notifyDataSetChanged();
+                boolean empty = myRides.isEmpty();
+                myRidesRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+                emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
 
-                    boolean empty = myRides.isEmpty();
-                    myRidesRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
-                    emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
-
-                    if (empty) {
-                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("🚗");
-                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText("No rides posted yet");
-                        ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText("Post your first campus ride!");
-                    }
-                });
+                if (empty) {
+                    ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateEmoji)).setText("🚗");
+                    ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText(getString(R.string.empty_title));
+                    ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText(getString(R.string.empty_desc));
+                }
+            } else if (result.isError() && myRides.isEmpty()) {
+                 myRidesRecyclerView.setVisibility(View.GONE);
+                 emptyStateView.setVisibility(View.VISIBLE);
+            }
+        });
     }
 }

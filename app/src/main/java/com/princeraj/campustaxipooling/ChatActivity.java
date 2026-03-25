@@ -3,30 +3,29 @@ package com.princeraj.campustaxipooling;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.content.Intent;
 import android.net.Uri;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.princeraj.campustaxipooling.model.Message;
-import com.princeraj.campustaxipooling.repository.ChatRepository;
+import com.princeraj.campustaxipooling.repository.IChatRepository;
+import com.princeraj.campustaxipooling.repository.IRideRepository;
+import com.princeraj.campustaxipooling.repository.IUserRepository;
 import com.princeraj.campustaxipooling.ui.chat.MessageAdapter;
+import com.princeraj.campustaxipooling.ui.chat.RatingDialogFragment;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
 /**
  * Real-time chat screen between two ride-pool partners.
@@ -36,26 +35,35 @@ import java.util.List;
  *  - Client-side moderation runs BEFORE every Firestore write
  *  - Blocked messages are stored with isBlocked=true (admin-visible, not shown to recipient)
  */
+@AndroidEntryPoint
 public class ChatActivity extends BaseActivity {
 
     private RecyclerView messagesRecyclerView;
-    private TextInputEditText messageEt;
+    private EditText messageEt;
     private FloatingActionButton sendBtn;
     private TextView partnerInitialTv, partnerNameTv, rideRouteHeaderTv;
-    private ImageView callBtn;
+    private ImageView callBtn, rateBtn;
 
     private MessageAdapter messageAdapter;
     private final List<Message> messages = new ArrayList<>();
 
-    private final ChatRepository chatRepo = ChatRepository.getInstance();
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    @Inject
+    IChatRepository chatRepo;
+    
+    @Inject
+    IUserRepository userRepo;
+    
+    @Inject
+    IRideRepository rideRepo;
 
     private String connectionId;
     private String rideId;
     private String currentUid;
     private String currentUserName = "User";
-
-    private ListenerRegistration messageListener;
+    
+    // Store partner info for rating
+    private String partnerUid;
+    private String partnerName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +73,7 @@ public class ChatActivity extends BaseActivity {
         connectionId = getIntent().getStringExtra("connectionId");
         rideId = getIntent().getStringExtra("rideId");
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        com.google.firebase.auth.FirebaseUser user = userRepo.getCurrentFirebaseUser();
         if (connectionId == null || user == null) {
             finish();
             return;
@@ -75,12 +83,18 @@ public class ChatActivity extends BaseActivity {
         bindViews();
         setupRecyclerView();
         loadChatHeader();
-        attachMessageListener();
+        observeMessages();
         loadCurrentUserName();
 
         sendBtn.setOnClickListener(v -> sendMessage());
+        
+        rateBtn.setOnClickListener(v -> {
+            if (partnerUid != null && partnerName != null) {
+                RatingDialogFragment.newInstance(rideId, currentUid, partnerUid, partnerName)
+                        .show(getSupportFragmentManager(), "rating");
+            }
+        });
 
-        // Also send on keyboard "Send" action
         messageEt.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) {
                 sendMessage();
@@ -90,8 +104,6 @@ public class ChatActivity extends BaseActivity {
         });
     }
 
-    // ── Setup ─────────────────────────────────────────────────────────────────
-
     private void bindViews() {
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView);
         messageEt = findViewById(R.id.messageEt);
@@ -100,6 +112,7 @@ public class ChatActivity extends BaseActivity {
         partnerNameTv = findViewById(R.id.partnerName);
         rideRouteHeaderTv = findViewById(R.id.rideRouteHeader);
         callBtn = findViewById(R.id.callBtn);
+        rateBtn = findViewById(R.id.rateBtn);
 
         ImageView backBtn = findViewById(R.id.backBtn);
         backBtn.setOnClickListener(v -> finish());
@@ -108,149 +121,93 @@ public class ChatActivity extends BaseActivity {
     private void setupRecyclerView() {
         messageAdapter = new MessageAdapter(messages, currentUid);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        layoutManager.setStackFromEnd(true);      // Messages start from bottom
+        layoutManager.setStackFromEnd(true);
         messagesRecyclerView.setLayoutManager(layoutManager);
         messagesRecyclerView.setAdapter(messageAdapter);
     }
 
     private void loadChatHeader() {
-        // Load ride details for the header subtitle
         if (rideId != null) {
-            db.collection("rides").document(rideId).get()
-                    .addOnSuccessListener(doc -> {
-                        if (doc.exists()) {
-                            String src = doc.getString("source");
-                            String dst = doc.getString("destination");
-                            if (src != null && dst != null) {
-                                rideRouteHeaderTv.setText(src + " → " + dst);
+            rideRepo.getRideById(rideId).observe(this, result -> {
+                if (result.isSuccess() && result.getData() != null) {
+                    com.princeraj.campustaxipooling.model.Ride ride = result.getData();
+                    rideRouteHeaderTv.setText(ride.getSource() + " → " + ride.getDestination());
+                }
+            });
+        }
+
+        rideRepo.getConnection(connectionId).observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                com.princeraj.campustaxipooling.model.Connection conn = result.getData();
+                partnerUid = currentUid.equals(conn.getPosterUid()) ? conn.getJoinerUid() : conn.getPosterUid();
+
+                if (partnerUid != null) {
+                    userRepo.getUserProfile(partnerUid).observe(this, userResult -> {
+                        if (userResult.isSuccess() && userResult.getData() != null) {
+                            com.princeraj.campustaxipooling.model.User partner = userResult.getData();
+                            partnerName = partner.getName();
+                            partnerNameTv.setText(partnerName);
+                            partnerInitialTv.setText(String.valueOf(partnerName.charAt(0)).toUpperCase());
+
+                            if (partner.getPhoneNumber() != null && partner.isPhoneVisibleToMatches()) {
+                                callBtn.setVisibility(View.VISIBLE);
+                                callBtn.setOnClickListener(v -> {
+                                    Intent intent = new Intent(Intent.ACTION_DIAL);
+                                    intent.setData(Uri.parse("tel:" + partner.getPhoneNumber()));
+                                    startActivity(intent);
+                                });
+                            } else {
+                                callBtn.setVisibility(View.GONE);
                             }
                         }
                     });
-        }
-
-        // Load connection to find partner name
-        db.collection("connections").document(connectionId).get()
-                .addOnSuccessListener(doc -> {
-                    if (!doc.exists()) return;
-                    String posterUid = doc.getString("posterUid");
-                    String joinerUid = doc.getString("joinerUid");
-                    String partnerUid = currentUid.equals(posterUid) ? joinerUid : posterUid;
-
-                    if (partnerUid != null) {
-                        db.collection("users").document(partnerUid).get()
-                                .addOnSuccessListener(userDoc -> {
-                                    String name = userDoc.getString("name");
-                                    if (name == null) name = "Partner";
-                                    partnerNameTv.setText(name);
-                                    partnerInitialTv.setText(
-                                            String.valueOf(name.charAt(0)).toUpperCase());
-
-                                    // ── PRIVACY CHECK: Only show call button if partner allows it ──
-                                    String phone = userDoc.getString("phoneNumber");
-                                    Boolean isVisible = userDoc.getBoolean("isPhoneVisibleToMatches");
-                                    if (phone != null && !phone.isEmpty() && Boolean.TRUE.equals(isVisible)) {
-                                        callBtn.setVisibility(View.VISIBLE);
-                                        callBtn.setOnClickListener(v -> {
-                                            Intent intent = new Intent(Intent.ACTION_DIAL);
-                                            intent.setData(Uri.parse("tel:" + phone));
-                                            startActivity(intent);
-                                        });
-                                    } else {
-                                        callBtn.setVisibility(View.GONE);
-                                    }
-                                });
-                    }
-                });
+                }
+            }
+        });
     }
 
     private void loadCurrentUserName() {
-        db.collection("users").document(currentUid).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        currentUserName = doc.getString("name");
-                        if (currentUserName == null) currentUserName = "User";
-                    }
-                });
+        userRepo.getUserProfile(currentUid).observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                currentUserName = result.getData().getName();
+            }
+        });
     }
 
-    // ── Real-time listener ────────────────────────────────────────────────────
-
-    private void attachMessageListener() {
-        messageListener = chatRepo.getMessagesQuery(connectionId)
-                .addSnapshotListener((snapshots, error) -> {
-                    if (error != null || snapshots == null) return;
-
-                    messages.clear();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        Message msg = doc.toObject(Message.class);
-                        if (msg != null && !msg.isBlocked()) {
-                            // Only show non-blocked messages to the recipient
-                            messages.add(msg);
-                        }
-                    }
-
-                    messageAdapter.notifyDataSetChanged();
-                    // Scroll to latest message
-                    if (!messages.isEmpty()) {
-                        messagesRecyclerView.smoothScrollToPosition(messages.size() - 1);
-                    }
-                });
+    private void observeMessages() {
+        chatRepo.getMessages(connectionId).observe(this, result -> {
+            if (result.isSuccess() && result.getData() != null) {
+                messages.clear();
+                messages.addAll(result.getData());
+                messageAdapter.notifyDataSetChanged();
+                if (!messages.isEmpty()) {
+                    messagesRecyclerView.smoothScrollToPosition(messages.size() - 1);
+                }
+            } else if (result.isError()) {
+                Snackbar.make(sendBtn, "Error sync messages: " + result.getMessage(), Snackbar.LENGTH_SHORT).show();
+            }
+        });
     }
-
-    // ── Send Message ──────────────────────────────────────────────────────────
 
     private void sendMessage() {
-        String text = messageEt.getText() != null
-                ? messageEt.getText().toString().trim() : "";
-
+        String text = messageEt.getText() != null ? messageEt.getText().toString().trim() : "";
         if (TextUtils.isEmpty(text)) return;
 
-        // ── Step 1: Client-side moderation (synchronous, instant) ──────────
-        ChatRepository.ModerationResult result = chatRepo.moderateMessage(text);
-
-        if (!result.isClean) {
-            // Message is flagged — warn user, do NOT send to partner
-            Snackbar.make(sendBtn,
-                    "⚠️ " + result.userMessage,
-                    Snackbar.LENGTH_LONG).show();
-
-            // Still write flagged version for admin audit (isBlocked = true)
-            chatRepo.sendFlaggedMessage(connectionId, currentUid, text, result.flagReason);
-
-            // Clear the field
+        com.princeraj.campustaxipooling.repository.IChatRepository.ModerationResult mod = chatRepo.moderateMessage(text);
+        if (!mod.isClean) {
+            Snackbar.make(sendBtn, "⚠️ " + mod.userMessage, Snackbar.LENGTH_LONG).show();
+            chatRepo.sendFlaggedMessage(connectionId, currentUid, text, mod.flagReason);
             messageEt.setText("");
             return;
         }
 
-        // ── Step 2: Message is clean — write to Firestore ──────────────────
         Message message = new Message(currentUid, text);
-        messageEt.setText("");      // Clear immediately for responsive UX
+        messageEt.setText("");
 
-        chatRepo.sendMessage(connectionId, message, currentUserName)
-                .addOnFailureListener(e ->
-                        Snackbar.make(sendBtn,
-                                "Failed to send. Check your connection.",
-                                Snackbar.LENGTH_SHORT).show());
-    }
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        // Detach listener when activity is not visible
-        if (messageListener != null) {
-            messageListener.remove();
-            messageListener = null;
-        }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // Re-attach if activity comes back
-        if (messageListener == null && connectionId != null) {
-            attachMessageListener();
-        }
+        chatRepo.sendMessage(connectionId, message, currentUserName).observe(this, result -> {
+            if (result.isError()) {
+                Snackbar.make(sendBtn, "Failed to send: " + result.getMessage(), Snackbar.LENGTH_SHORT).show();
+            }
+        });
     }
 }

@@ -149,11 +149,11 @@ public class ChatActivity extends BaseActivity {
                             partnerNameTv.setText(partnerName);
                             partnerInitialTv.setText(String.valueOf(partnerName.charAt(0)).toUpperCase());
 
-                            if (partner.getPhoneNumber() != null && partner.isPhoneVisibleToMatches()) {
+                            if (partner.obtainPhoneNumberString() != null && partner.isPhoneVisibleToMatches()) {
                                 callBtn.setVisibility(View.VISIBLE);
                                 callBtn.setOnClickListener(v -> {
                                     Intent intent = new Intent(Intent.ACTION_DIAL);
-                                    intent.setData(Uri.parse("tel:" + partner.getPhoneNumber()));
+                                    intent.setData(Uri.parse("tel:" + partner.obtainPhoneNumberString()));
                                     startActivity(intent);
                                 });
                             } else {

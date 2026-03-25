@@ -15,74 +15,6 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="20dp"
-            android:background="@color/bg_dark">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/find_ride"
-                android:textSize="32sp"
-                android:fontFamily="sans-serif-condensed-medium"
-                android:textColor="@color/text_primary"
-                android:letterSpacing="-0.02"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/find_ride_subtitle"
-                android:textSize="14sp"
-                android:alpha="0.75"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="24dp"/>
-
-            <!-- Improved Search Bar -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                app:cardBackgroundColor="@color/bg_card"
-                app:cardCornerRadius="27dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="18dp">
-
-                    <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:src="@android:drawable/ic_search_category_default"
-                        app:tint="@color/brand_primary_light" />
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/searchEt"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_marginStart="12dp"
-                        android:background="@null"
-                        android:hint="@string/search_hint"
-                        android:textColorHint="@color/text_hint"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp"
-                        android:imeOptions="actionSearch"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:singleLine="true"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Shimmer Loader -->
@@ -97,13 +29,17 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="283dp"
             android:orientation="vertical">
 
-            <include layout="@layout/item_ride_card_shimmer"/>
-            <include layout="@layout/item_ride_card_shimmer"/>
-            <include layout="@layout/item_ride_card_shimmer"/>
-            <include layout="@layout/item_ride_card_shimmer"/>
+            <include layout="@layout/item_ride_card_shimmer" />
+
+            <include layout="@layout/item_ride_card_shimmer" />
+
+            <include layout="@layout/item_ride_card_shimmer" />
+
+            <include layout="@layout/item_ride_card_shimmer" />
+
         </LinearLayout>
     </com.facebook.shimmer.ShimmerFrameLayout>
 
@@ -124,20 +60,91 @@
         layout="@layout/view_empty_state"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_dark"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="20dp"
+        app:layout_anchor="@+id/appBarLayout"
+        app:layout_anchorGravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-condensed-medium"
+            android:letterSpacing="-0.02"
+            android:text="@string/find_ride"
+            android:textColor="@color/text_primary"
+            android:textSize="32sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="24dp"
+            android:alpha="0.75"
+            android:text="@string/find_ride_subtitle"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <!-- Improved Search Bar -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="27dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="18dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@android:drawable/ic_search_category_default"
+                    app:tint="@color/brand_primary_light" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/searchEt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="12dp"
+                    android:background="@null"
+                    android:hint="@string/search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/postRideFab"
+            android:layout_width="326dp"
+            android:layout_height="64dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="24dp"
+            android:text="@string/post_ride_fab"
+            android:textColor="@color/black"
+            android:textStyle="bold"
+            app:backgroundTint="@color/brand_secondary"
+            app:elevation="8dp"
+            app:icon="@drawable/ic_add_taxi"
+            app:iconTint="@color/black"
+            app:rippleColor="#40000000" />
+    </LinearLayout>
+
     <!-- Yellow Highlight FAB: Post a Ride -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/postRideFab"
-        android:layout_width="wrap_content"
-        android:layout_height="64dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="24dp"
-        android:text="@string/post_ride_fab"
-        android:textColor="@color/black"
-        android:textStyle="bold"
-        app:icon="@drawable/ic_add_taxi"
-        app:iconTint="@color/black"
-        app:backgroundTint="@color/brand_secondary"
-        app:elevation="8dp"
-        app:rippleColor="#40000000"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

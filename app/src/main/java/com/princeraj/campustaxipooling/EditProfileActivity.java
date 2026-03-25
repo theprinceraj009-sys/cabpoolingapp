@@ -98,7 +98,7 @@ public class EditProfileActivity extends BaseActivity {
                 com.princeraj.campustaxipooling.model.User profile = result.getData();
                 nameEt.setText(profile.getName());
                 departmentEt.setText(profile.getDepartment());
-                phoneEt.setText(profile.getPhoneNumber());
+                phoneEt.setText(profile.obtainPhoneNumberString());
                 rollNumberEt.setText(profile.getRollNumber());
                 switchPrivacyPhone.setChecked(profile.isPhoneVisibleToMatches());
 

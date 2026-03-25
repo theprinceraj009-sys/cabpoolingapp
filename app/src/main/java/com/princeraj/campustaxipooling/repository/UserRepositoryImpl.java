@@ -216,10 +216,8 @@ public class UserRepositoryImpl implements IUserRepository {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
-                        User user = snapshot.toObject(User.class);
-                        if (user != null) {
-                            userCache.put(uid, user);
-                        }
+                        User user = userFromSnapshot(snapshot);
+                        userCache.put(uid, user);
                         liveData.setValue(SafeResult.success(user));
                     } else {
                         liveData.setValue(SafeResult.error(
@@ -232,13 +230,75 @@ public class UserRepositoryImpl implements IUserRepository {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching user profile", e);
-                    // If we have cached data, don't show error to user
                     if (!userCache.containsKey(uid)) {
                         liveData.setValue(SafeResult.error(e, "Failed to load user profile."));
                     }
                 });
 
         return liveData;
+    }
+
+    /**
+     * Manually maps a Firestore DocumentSnapshot to a User object.
+     * This bypasses Firebase CustomClassMapper entirely, which crashes when it
+     * encounters a Long value in a field that was once declared as String (e.g. phoneNumber).
+     */
+    private User userFromSnapshot(com.google.firebase.firestore.DocumentSnapshot s) {
+        User u = new User();
+        // @DocumentId is handled manually
+        u.setUid(s.getId());
+        safeSetString(u::setName, s.getString("name"));
+        safeSetString(u::setEmail, s.getString("email"));
+        safeSetString(u::setRollNumber, s.getString("rollNumber"));
+        safeSetString(u::setDepartment, s.getString("department"));
+        safeSetString(u::setRole, s.getString("role"));
+        safeSetString(u::setCampusId, s.getString("campusId"));
+        safeSetString(u::setProfilePhotoUrl, s.getString("profilePhotoUrl"));
+        safeSetString(u::setSubscriptionTier, s.getString("subscriptionTier"));
+        safeSetString(u::setDriverLicense, s.getString("driverLicense"));
+        safeSetString(u::setVehicleModel, s.getString("vehicleModel"));
+        safeSetString(u::setVehicleNumber, s.getString("vehicleNumber"));
+        safeSetString(u::setBanReason, s.getString("banReason"));
+        safeSetString(u::setFcmToken, s.getString("fcmToken"));
+
+        // phoneNumber: stored as either Long (legacy) or String — handled as raw Object
+        Object rawPhone = s.get("phoneNumber");
+        if (rawPhone != null) {
+            u.setPhoneNumber(rawPhone);
+        }
+
+        // Booleans
+        Boolean isBanned = s.getBoolean("isBanned");
+        if (isBanned != null) u.setBanned(isBanned);
+        Boolean isAdmin = s.getBoolean("isAdmin");
+        if (isAdmin != null) u.setAdmin(isAdmin);
+        Boolean phoneVisible = s.getBoolean("isPhoneVisibleToMatches");
+        if (phoneVisible != null) u.setPhoneVisibleToMatches(phoneVisible);
+
+        // verifiedDriver: Firestore stores under both names depending on how it was written
+        Boolean vd = s.getBoolean("isVerifiedDriver");
+        if (vd == null) vd = s.getBoolean("verifiedDriver");
+        if (vd != null) u.setVerifiedDriver(vd);
+
+        // Numerics
+        Long ratingCount = s.getLong("ratingCount");
+        if (ratingCount != null) u.setRatingCount(ratingCount);
+        Double avgRating = s.getDouble("averageRating");
+        if (avgRating != null) u.setAverageRating(avgRating);
+        Long reportCount = s.getLong("reportCount");
+        if (reportCount != null) u.setReportCount(reportCount);
+
+        // Timestamps
+        com.google.firebase.Timestamp createdAt = s.getTimestamp("createdAt");
+        if (createdAt != null) u.setCreatedAt(createdAt);
+        com.google.firebase.Timestamp updatedAt = s.getTimestamp("updatedAt");
+        if (updatedAt != null) u.setUpdatedAt(updatedAt);
+
+        return u;
+    }
+
+    private void safeSetString(java.util.function.Consumer<String> setter, String value) {
+        setter.accept(value);
     }
 
     @Override

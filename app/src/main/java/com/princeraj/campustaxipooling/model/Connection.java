@@ -2,6 +2,7 @@ package com.princeraj.campustaxipooling.model;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.PropertyName;
 import java.util.List;
 
 /**
@@ -16,7 +17,9 @@ public class Connection {
     private String posterUid;
     private String joinerUid;
     private List<String> participants;  // [posterUid, joinerUid] for array-contains queries
+    @PropertyName("chatEnabled")
     private boolean chatEnabled;
+    @PropertyName("isActive")
     private boolean isActive;
     private Timestamp connectedAt;
 
@@ -36,8 +39,13 @@ public class Connection {
     public String getPosterUid() { return posterUid; }
     public String getJoinerUid() { return joinerUid; }
     public List<String> getParticipants() { return participants; }
+    
+    @PropertyName("chatEnabled")
     public boolean isChatEnabled() { return chatEnabled; }
+    
+    @PropertyName("isActive")
     public boolean isActive() { return isActive; }
+    
     public Timestamp getConnectedAt() { return connectedAt; }
 
     public void setConnectionId(String connectionId) { this.connectionId = connectionId; }
@@ -45,7 +53,12 @@ public class Connection {
     public void setPosterUid(String posterUid) { this.posterUid = posterUid; }
     public void setJoinerUid(String joinerUid) { this.joinerUid = joinerUid; }
     public void setParticipants(List<String> participants) { this.participants = participants; }
+    
+    @PropertyName("chatEnabled")
     public void setChatEnabled(boolean chatEnabled) { this.chatEnabled = chatEnabled; }
+    
+    @PropertyName("isActive")
     public void setActive(boolean active) { isActive = active; }
+    
     public void setConnectedAt(Timestamp connectedAt) { this.connectedAt = connectedAt; }
 }

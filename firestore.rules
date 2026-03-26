@@ -19,9 +19,12 @@ service cloud.firestore {
     }
 
     // CRITICAL: Block all writes for banned users
+    // Uses exists() guard so that brand-new users (no document yet) are not blocked.
     function isNotBanned() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isUserBanned', false) != true;
+      return isAuthenticated() && (
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isUserBanned', false) != true
+      );
     }
 
     // ─── 1. Users Collection ────────────────────────────────────────────────────
@@ -44,13 +47,14 @@ service cloud.firestore {
     match /rides/{rideId} {
       allow read: if isAuthenticated();
 
-      // Poster must beauthenticated and not banned
+      // Poster must be authenticated and not banned.
+      // Field names match the Java Ride model (totalSeats, totalFare).
       allow create: if isNotBanned()
         && request.resource.data.postedByUid == request.auth.uid
-        && request.resource.data.seats is int
-        && request.resource.data.seats >= 1
-        && request.resource.data.fare is number
-        && request.resource.data.fare >= 0;
+        && request.resource.data.totalSeats is int
+        && request.resource.data.totalSeats >= 1
+        && request.resource.data.totalFare is number
+        && request.resource.data.totalFare >= 0;
 
       // Only poster (if not banned) or Admin can update metadata or status
       allow update: if (resource.data.postedByUid == request.auth.uid && isNotBanned()) || isAdmin();
@@ -74,11 +78,15 @@ service cloud.firestore {
     // ─── 3. Connections & Chats ───────────────────────────────────────────────
     match /connections/{connectionId} {
       allow read: if isAuthenticated()
-        && (request.auth.uid in resource.data.participants || isAdmin());
+        && (request.auth.uid in resource.data.participants || 
+            request.auth.uid == resource.data.posterUid || 
+            request.auth.uid == resource.data.joinerUid ||
+            isAdmin());
       
       // Creating a connection requires being a match/participant
       allow create: if isNotBanned()
-        && request.auth.uid in request.resource.data.participants;
+        && (request.auth.uid == request.resource.data.posterUid || 
+            request.auth.uid == request.resource.data.joinerUid);
       
       allow update: if isNotBanned()
         && request.auth.uid in resource.data.participants;

@@ -268,7 +268,11 @@ public class SyncManager {
         map.put("isFlagged", message.isFlagged());
         map.put("flagReason", message.getFlagReason());
         map.put("isBlocked", message.isBlocked());
-        map.put("sentAt", Timestamp.now());
+        if (message.getSentAt() != null) {
+            map.put("sentAt", new Timestamp(new java.util.Date(message.getSentAt())));
+        } else {
+            map.put("sentAt", Timestamp.now());
+        }
         return map;
     }
 

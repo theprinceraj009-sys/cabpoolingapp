@@ -78,6 +78,7 @@ public class RideRepositoryImpl implements IRideRepository {
         // 1. Map & Save to Local Room DB (Immediate UI feedback path)
         final String rideId = db.collection(RIDES_COLLECTION).document().getId();
         ride.setRideId(rideId);
+        ride.setDeleted(false);
 
         final com.princeraj.campustaxipooling.db.entity.RideEntity entity = new com.princeraj.campustaxipooling.db.entity.RideEntity();
         entity.setRideId(rideId);
@@ -96,6 +97,7 @@ public class RideRepositoryImpl implements IRideRepository {
         entity.setStatus(ride.getStatus());
         entity.setCreatedAt(System.currentTimeMillis());
         entity.setSyncedAt(null);
+        entity.setDeleted(false);
 
         executors.diskIO().execute(() -> {
             database.rideDao().insertRide(entity);
@@ -169,12 +171,14 @@ public class RideRepositoryImpl implements IRideRepository {
                         List<Ride> rides = snapshot.toObjects(Ride.class);
                         liveData.postValue(SafeResult.success(rides));
 
-                        // ── Update Local Cache ──
-                        new Thread(() -> {
+                        // ── Update Local Cache (Optimized) ──
+                        executors.diskIO().execute(() -> {
+                            List<com.princeraj.campustaxipooling.db.entity.RideEntity> entities = new java.util.ArrayList<>();
                             for (Ride ride : rides) {
-                                database.rideDao().insertRide(mapRideToEntity(ride, true));
+                                entities.add(mapRideToEntity(ride, true));
                             }
-                        }).start();
+                            database.rideDao().insertRides(entities);
+                        });
                     }
                 });
 
@@ -245,12 +249,14 @@ public class RideRepositoryImpl implements IRideRepository {
                         List<Ride> rides = snapshot.toObjects(Ride.class);
                         liveData.setValue(SafeResult.success(rides));
 
-                        // Update cache
-                        new Thread(() -> {
+                        // Update cache (Optimized)
+                        executors.diskIO().execute(() -> {
+                            List<com.princeraj.campustaxipooling.db.entity.RideEntity> entities = new java.util.ArrayList<>();
                             for (Ride ride : rides) {
-                                database.rideDao().insertRide(mapRideToEntity(ride, true));
+                                entities.add(mapRideToEntity(ride, true));
                             }
-                        }).start();
+                            database.rideDao().insertRides(entities);
+                        });
                     }
                 });
 
@@ -279,6 +285,7 @@ public class RideRepositoryImpl implements IRideRepository {
         entity.setStatus(ride.getStatus());
         entity.setCreatedAt(ride.getCreatedAt() != null ? ride.getCreatedAt().toDate().getTime() : System.currentTimeMillis());
         entity.setSyncedAt(synced ? System.currentTimeMillis() : null);
+        entity.setDeleted(false);
         return entity;
     }
 
@@ -619,6 +626,54 @@ public class RideRepositoryImpl implements IRideRepository {
     }
 
     @Override
+    public LiveData<SafeResult<List<Ride>>> getMyJoinedRides(String uid) {
+        MutableLiveData<SafeResult<List<Ride>>> liveData = new MutableLiveData<>(SafeResult.loading());
+
+        // 1. Get connections where user is the joiner
+        db.collection(CONNECTIONS_COLLECTION)
+                .whereEqualTo("joinerUid", uid)
+                .whereEqualTo("isActive", true)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Error fetching joined connections", error);
+                        liveData.postValue(SafeResult.error(error, "Failed to load joined rides context."));
+                        return;
+                    }
+
+                    if (snapshot == null || snapshot.isEmpty()) {
+                        liveData.postValue(SafeResult.success(new ArrayList<>()));
+                        return;
+                    }
+
+                    List<String> rideIds = new ArrayList<>();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        String rid = doc.getString("rideId");
+                        if (rid != null && !rideIds.contains(rid)) rideIds.add(rid);
+                    }
+
+                    if (rideIds.isEmpty()) {
+                        liveData.postValue(SafeResult.success(new ArrayList<>()));
+                        return;
+                    }
+
+                    // 2. Fetch the corresponding rides (limit 30 for whereIn)
+                    db.collection(RIDES_COLLECTION)
+                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), rideIds)
+                            .get()
+                            .addOnSuccessListener(rideSnap -> {
+                                List<Ride> joinedRides = rideSnap.toObjects(Ride.class);
+                                liveData.postValue(SafeResult.success(joinedRides));
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error fetching joined rides from rideIds", e);
+                                liveData.postValue(SafeResult.error(e, "Failed to load ride details for joined rides."));
+                            });
+                });
+
+        return liveData;
+    }
+
+    @Override
     public LiveData<SafeResult<Void>> completeRide(String connectionId) {
         MutableLiveData<SafeResult<Void>> liveData = new MutableLiveData<>(SafeResult.loading());
 
@@ -704,4 +759,3 @@ public class RideRepositoryImpl implements IRideRepository {
         activeListeners.clear();
     }
 }
-

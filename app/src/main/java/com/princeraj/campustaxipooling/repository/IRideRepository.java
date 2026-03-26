@@ -39,6 +39,11 @@ public interface IRideRepository {
     LiveData<SafeResult<List<Ride>>> getMyPostedRides(String uid);
 
     /**
+     * Fetches rides where the current user is a passenger (accepted connection).
+     */
+    LiveData<SafeResult<List<Ride>>> getMyJoinedRides(String uid);
+
+    /**
      * Fetches a single ride by ID.
      */
     LiveData<SafeResult<Ride>> getRideById(String rideId);

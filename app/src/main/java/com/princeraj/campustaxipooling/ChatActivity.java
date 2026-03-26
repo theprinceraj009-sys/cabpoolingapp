@@ -147,7 +147,13 @@ public class ChatActivity extends BaseActivity {
                             com.princeraj.campustaxipooling.model.User partner = userResult.getData();
                             partnerName = partner.getName();
                             partnerNameTv.setText(partnerName);
-                            partnerInitialTv.setText(String.valueOf(partnerName.charAt(0)).toUpperCase());
+                            
+                            // Safety check for empty name (prevent charAt(0) crash)
+                            if (partnerName != null && !partnerName.isEmpty()) {
+                                partnerInitialTv.setText(String.valueOf(partnerName.charAt(0)).toUpperCase());
+                            } else {
+                                partnerInitialTv.setText("?");
+                            }
 
                             if (partner.obtainPhoneNumberString() != null && partner.isPhoneVisibleToMatches()) {
                                 callBtn.setVisibility(View.VISIBLE);

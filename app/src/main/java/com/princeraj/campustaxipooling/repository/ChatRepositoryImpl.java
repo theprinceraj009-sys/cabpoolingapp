@@ -68,12 +68,12 @@ public class ChatRepositoryImpl implements IChatRepository {
                     if (error != null) {
                         Log.w(TAG, "Chat fetch failed, falling back to local cache", error);
                         // ── Phase 3: Offline Fallback ──
-                        new Thread(() -> {
+                        executors.diskIO().execute(() -> {
                             List<com.princeraj.campustaxipooling.db.entity.MessageEntity> entities = 
                                     database.messageDao().getMessagesForConnection(connectionId);
                             List<Message> messages = mapMessageEntitiesToModels(entities);
                             liveData.postValue(SafeResult.errorWithCache(error, messages, "Offline. Showing cached messages."));
-                        }).start();
+                        });
                         return;
                     }
 
@@ -82,11 +82,11 @@ public class ChatRepositoryImpl implements IChatRepository {
                         liveData.setValue(SafeResult.success(messages));
 
                         // Update cache
-                        new Thread(() -> {
+                        executors.diskIO().execute(() -> {
                             for (Message msg : messages) {
                                 database.messageDao().insertMessage(mapMessageToEntity(connectionId, msg, true));
                             }
-                        }).start();
+                        });
                     }
                 });
 
@@ -149,7 +149,7 @@ public class ChatRepositoryImpl implements IChatRepository {
         com.princeraj.campustaxipooling.db.entity.MessageEntity entity = mapMessageToEntity(connectionId, message, false);
         entity.setMessageId(messageId);
 
-        new Thread(() -> {
+        executors.diskIO().execute(() -> {
             database.messageDao().insertMessage(entity);
             
             // Initiate Firestore upload
@@ -161,20 +161,28 @@ public class ChatRepositoryImpl implements IChatRepository {
                     .addOnSuccessListener(aVoid -> {
                         Log.d(TAG, "Message synced to Firestore");
                         entity.setSyncedAt(System.currentTimeMillis());
-                        new Thread(() -> database.messageDao().updateMessage(entity)).start();
+                        executors.diskIO().execute(() -> database.messageDao().updateMessage(entity));
                         liveData.postValue(SafeResult.success(null));
                     })
                     .addOnFailureListener(e -> {
                         Log.w(TAG, "Message failed to sync (will retry background sync)", e);
                         liveData.postValue(SafeResult.success(null));
                     });
-        }).start();
+        });
 
         return liveData;
     }
 
     private com.princeraj.campustaxipooling.db.entity.MessageEntity mapMessageToEntity(String connectionId, Message msg, boolean synced) {
         com.princeraj.campustaxipooling.db.entity.MessageEntity entity = new com.princeraj.campustaxipooling.db.entity.MessageEntity();
+        
+        // Safety check for @NonNull PrimaryKey
+        String mid = msg.getMessageId();
+        if (mid == null || mid.isEmpty()) {
+            mid = "temp_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+        }
+        
+        entity.setMessageId(mid);
         entity.setConnectionId(connectionId);
         entity.setSenderUid(msg.getSenderUid());
         entity.setText(msg.getText());
@@ -194,6 +202,7 @@ public class ChatRepositoryImpl implements IChatRepository {
         List<Message> messages = new ArrayList<>();
         for (com.princeraj.campustaxipooling.db.entity.MessageEntity entity : entities) {
             Message msg = new Message();
+            msg.setMessageId(entity.getMessageId());
             msg.setSenderUid(entity.getSenderUid());
             msg.setText(entity.getText());
             msg.setFlagged(entity.isFlagged());

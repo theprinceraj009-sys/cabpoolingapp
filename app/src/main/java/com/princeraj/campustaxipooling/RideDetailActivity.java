@@ -143,10 +143,19 @@ public class RideDetailActivity extends BaseActivity {
         requestRideBtn.setEnabled(false);
         requestRideBtn.setText("Sending…");
 
+        // State guard to prevent multiple requests (Cache + Cloud events).
+        final boolean[] requestStarted = {false};
+
         userRepo.getUserProfile(user.getUid()).observe(this, result -> {
-           if (result.isSuccess() && result.getData() != null) {
+            if (isFinishing() || isDestroyed()) return;
+            if (result.isLoading()) return;
+            if (requestStarted[0]) return; // Already triggered
+
+            if (result.isSuccess() && result.getData() != null) {
                 String name = result.getData().getName();
                 SeatRequest request = new SeatRequest(user.getUid(), name != null ? name : user.getEmail(), "");
+                
+                requestStarted[0] = true; // Mark as started
 
                 rideRepo.sendJoinRequest(rideId, request, currentRide.getPostedByUid()).observe(this, res -> {
                     if (res.isLoading()) return;
@@ -155,12 +164,17 @@ public class RideDetailActivity extends BaseActivity {
                         requestRideBtn.setText("Request Sent ✓");
                         Snackbar.make(requestRideBtn, "Join request sent! Waiting for approval.", Snackbar.LENGTH_LONG).show();
                     } else {
+                        requestStarted[0] = false; // Allow retry on error
                         requestRideBtn.setEnabled(true);
                         requestRideBtn.setText("Request to Join");
                         Snackbar.make(requestRideBtn, "Error: " + res.getMessage(), Snackbar.LENGTH_SHORT).show();
                     }
                 });
-           }
+            } else if (result.isError()) {
+                requestRideBtn.setEnabled(true);
+                requestRideBtn.setText("Request to Join");
+                Snackbar.make(requestRideBtn, "Failed to load user info: " + result.getMessage(), Snackbar.LENGTH_SHORT).show();
+            }
         });
     }
 }

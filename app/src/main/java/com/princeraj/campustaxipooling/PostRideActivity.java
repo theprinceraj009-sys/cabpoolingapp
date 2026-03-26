@@ -141,10 +141,14 @@ public class PostRideActivity extends BaseActivity {
 
         setLoading(true);
 
+        // State guard to prevent duplicate posting if LiveData emits multiple times (e.g. Cache + Network)
+        final boolean[] postStarted = {false};
+
         userRepo.getUserProfile(currentUid)
                 .observe(this, result -> {
                     if (isFinishing() || isDestroyed()) return;
                     if (result.isLoading()) return;
+                    if (postStarted[0]) return; // Already triggered the post
 
                     if (result.isError()) {
                         setLoading(false);
@@ -153,8 +157,7 @@ public class PostRideActivity extends BaseActivity {
                     }
 
                     User user = result.getData();
-                    // RULE RELAXED: Anyone verified on the campus can now post a ride.
-                    // TODO: Re-introduce driver verification in Phase 8 as a non-blocking feature.
+                    postStarted[0] = true; // Mark as started to ignore subsequent emissions
                     
                     String name = user != null ? user.getName() : "Anonymous";
                     Ride ride = new Ride(
@@ -173,11 +176,12 @@ public class PostRideActivity extends BaseActivity {
                     rideRepo.postRide(ride).observe(this, rideResult -> {
                         if (rideResult.isLoading()) return;
                         
-                        setLoading(false);
                         if (rideResult.isSuccess()) {
                             MessageDialogFragment.newInstance("Success", "Ride posted successfully! 🚕", this::finish)
                                     .show(getSupportFragmentManager(), "post_success");
                         } else {
+                            setLoading(false);
+                            postStarted[0] = false; // Allow retry on error
                             MessageDialogFragment.newInstance("Error", "Failed to post: " + rideResult.getMessage(), null)
                                     .show(getSupportFragmentManager(), "post_error");
                         }

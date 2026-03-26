@@ -14,9 +14,16 @@
       "collectionGroup": "rides",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "campusId",        "order": "ASCENDING"  },
-        { "fieldPath": "status",          "order": "ASCENDING"  },
-        { "fieldPath": "journeyDateTime", "order": "DESCENDING" }
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "status",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "rides",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "postedByUid", "order": "ASCENDING" },
+        { "fieldPath": "isDeleted",   "order": "ASCENDING" }
       ]
     },
     {
@@ -33,16 +40,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "isActive",    "order": "ASCENDING"       },
-        { "fieldPath": "connectedAt", "order": "DESCENDING"      }
+        { "fieldPath": "isActive",     "order": "ASCENDING"      }
+      ]
+    },
+    {
+      "collectionGroup": "connections",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "isActive",     "order": "ASCENDING"      },
+        { "fieldPath": "connectedAt",  "order": "DESCENDING"     }
       ]
     },
     {
       "collectionGroup": "messages",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isBlocked",  "order": "ASCENDING" },
-        { "fieldPath": "timestamp",  "order": "ASCENDING" }
+        { "fieldPath": "isBlocked", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
       ]
     },
     {
@@ -60,6 +75,22 @@
         { "fieldPath": "targetUid", "order": "ASCENDING"  },
         { "fieldPath": "status",    "order": "ASCENDING"  },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "auditLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",    "order": "ASCENDING"  },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "auditLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "action",    "order": "ASCENDING"  },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
   ],

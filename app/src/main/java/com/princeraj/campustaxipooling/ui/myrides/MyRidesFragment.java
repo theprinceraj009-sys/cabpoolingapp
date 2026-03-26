@@ -100,28 +100,37 @@ public class MyRidesFragment extends Fragment {
         String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null
                 ? com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
 
-        // Phase 3: Observe LiveData from repository
-        rideRepo.getMyPostedRides(uid).observe(getViewLifecycleOwner(), result -> {
-            if (result.isLoading() && myRides.isEmpty()) {
+        if (uid.isEmpty()) return;
+
+        myRides.clear();
+        adapter.notifyDataSetChanged();
+
+        if (shimmerViewContainer != null) {
+            shimmerViewContainer.startShimmer();
+            shimmerViewContainer.setVisibility(View.VISIBLE);
+        }
+
+        // We use a map to ensure latest ride data replaces old entries (handles status updates)
+        final java.util.Map<String, Ride> ridesMap = new java.util.HashMap<>();
+        final int[] finishedCount = {0};
+
+        Runnable updateUI = () -> {
+            myRides.clear();
+            myRides.addAll(ridesMap.values());
+            // Sort by createdAt / journeyDateTime DESC
+            myRides.sort((r1, r2) -> {
+                long t1 = r1.getCreatedAt() != null ? r1.getCreatedAt().toDate().getTime() : 0;
+                long t2 = r2.getCreatedAt() != null ? r2.getCreatedAt().toDate().getTime() : 0;
+                return Long.compare(t2, t1);
+            });
+            adapter.notifyDataSetChanged();
+
+            if (finishedCount[0] >= 2) {
                 if (shimmerViewContainer != null) {
-                    shimmerViewContainer.startShimmer();
-                    shimmerViewContainer.setVisibility(View.VISIBLE);
+                    shimmerViewContainer.stopShimmer();
+                    shimmerViewContainer.setVisibility(View.GONE);
                 }
-                return;
-            }
-
-            // Stop and hide shimmer
-            if (shimmerViewContainer != null) {
-                shimmerViewContainer.stopShimmer();
-                shimmerViewContainer.setVisibility(View.GONE);
-            }
-
-            if (result.getData() != null) {
-                myRides.clear();
-                myRides.addAll(result.getData());
                 
-                adapter.notifyDataSetChanged();
-
                 boolean empty = myRides.isEmpty();
                 myRidesRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
                 emptyStateView.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -131,9 +140,34 @@ public class MyRidesFragment extends Fragment {
                     ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateTitle)).setText(getString(R.string.empty_title));
                     ((android.widget.TextView)emptyStateView.findViewById(R.id.emptyStateSubtitle)).setText(getString(R.string.empty_desc));
                 }
-            } else if (result.isError() && myRides.isEmpty()) {
-                 myRidesRecyclerView.setVisibility(View.GONE);
-                 emptyStateView.setVisibility(View.VISIBLE);
+            }
+        };
+
+        // 1. Load Posted Rides
+        rideRepo.getMyPostedRides(uid).observe(getViewLifecycleOwner(), result -> {
+            if (result.getData() != null) {
+                for (Ride ride : result.getData()) {
+                    ridesMap.put(ride.getRideId(), ride);
+                }
+                if (!result.isLoading()) finishedCount[0]++;
+                updateUI.run();
+            } else if (result.isError()) {
+                finishedCount[0]++;
+                updateUI.run();
+            }
+        });
+
+        // 2. Load Joined Rides
+        rideRepo.getMyJoinedRides(uid).observe(getViewLifecycleOwner(), result -> {
+            if (result.getData() != null) {
+                for (Ride ride : result.getData()) {
+                    ridesMap.put(ride.getRideId(), ride);
+                }
+                if (!result.isLoading()) finishedCount[0]++;
+                updateUI.run();
+            } else if (result.isError()) {
+                finishedCount[0]++;
+                updateUI.run();
             }
         });
     }

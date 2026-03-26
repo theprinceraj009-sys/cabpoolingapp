@@ -2,6 +2,7 @@ package com.princeraj.campustaxipooling.model;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.PropertyName;
 
 /**
@@ -93,20 +94,34 @@ public class Ride implements java.io.Serializable {
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers (Excluded from Firestore Mapping) ───────────────────────────
 
+    @Exclude
     public boolean hasSeatsAvailable() {
         return seatsRemaining > 0 && isActive();
     }
 
+    @Exclude
     public boolean isActive() {
         boolean timeValid = journeyDateTime == null || 
                    journeyDateTime.toDate().after(new java.util.Date());
         return "ACTIVE".equals(status) && !isDeleted && timeValid;
     }
 
+    @Exclude
     public float getPerPersonFare() {
         if (totalSeats <= 0) return 0f;
         return (float) totalFare / totalSeats;
     }
+
+    // ── Ignored Firestore Fields ──────────────────────────────────────────────
+    // These setters absorb Firestore fields that exist in some documents but are
+    // computed locally. Without them, Firestore's CustomClassMapper prints
+    // "No setter/field" warnings for every document read.
+
+    @PropertyName("active")
+    public void setActive(boolean ignored) { /* computed field — ignored */ }
+
+    @PropertyName("perPersonFare")
+    public void setPerPersonFare(float ignored) { /* computed field — ignored */ }
 }

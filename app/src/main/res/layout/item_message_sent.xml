@@ -18,12 +18,14 @@
             android:id="@+id/messageText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
+            android:textColor="@color/black"
             android:textSize="15sp"
-            android:maxWidth="260dp"
+            android:maxWidth="280dp"
             android:background="@drawable/bg_bubble_sent"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="8dp"/>
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:layout_marginStart="40dp"
+            android:fontFamily="sans-serif"/>
 
         <TextView
             android:id="@+id/timeText"

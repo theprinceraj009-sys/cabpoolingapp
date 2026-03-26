@@ -45,6 +45,16 @@ android {
     buildFeatures {
         viewBinding = true   // Enable ViewBinding to avoid findViewById boilerplate
     }
+
+    testOptions {
+        unitTests.all {
+            // Required for Mockito inline mocking under JDK 17+ / JDK 22 toolchain
+            it.jvmArgs(
+                "-Dnet.bytebuddy.experimental=true",
+                "-XX:+EnableDynamicAgentLoading"
+            )
+        }
+    }
 }
 
 dependencies {

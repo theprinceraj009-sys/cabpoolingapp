@@ -27,8 +27,7 @@ import org.junit.runner.RunWith;
 public class RideLifecycleTest {
 
     @Rule
-    public ActivityScenarioRule<HomeActivity> activityRule =
-            new ActivityScenarioRule<>(HomeActivity.class);
+    public ActivityScenarioRule<HomeActivity> activityRule = new ActivityScenarioRule<>(HomeActivity.class);
 
     @Before
     public void setUp() {
@@ -57,7 +56,8 @@ public class RideLifecycleTest {
         // 2. Click Post button without filling fields
         onView(withId(R.id.postRideBtn)).perform(click());
 
-        // 3. Verify presence of SnackBar error (using text from R.string.fill_all_fields via matches)
+        // 3. Verify presence of SnackBar error (using text from
+        // R.string.fill_all_fields via matches)
         onView(withText("Please fill in all required fields"))
                 .check(matches(isDisplayed()));
     }
